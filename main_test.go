@@ -10,6 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/adzpm/edgeemu-cli/client"
 	"github.com/adzpm/edgeemu-cli/ds"
 )
@@ -64,72 +67,50 @@ func runCLI(t *testing.T, page string, args ...string) (string, error) {
 
 func TestSearchJSON(t *testing.T) {
 	out, err := runCLI(t, searchPage, "search", "sonic", "--json")
-	if err != nil {
-		t.Fatalf("run: %v", err)
-	}
+	require.NoError(t, err)
 
 	var roms []ds.ROM
-	if err := json.Unmarshal([]byte(out), &roms); err != nil {
-		t.Fatalf("output is not valid JSON: %v\n%s", err, out)
-	}
-	if len(roms) != 2 {
-		t.Fatalf("got %d roms, want 2", len(roms))
-	}
-	if roms[0].Name != "Sonic The Hedgehog (USA, Europe)" {
-		t.Errorf("first rom = %+v", roms[0])
-	}
+	require.NoError(t, json.Unmarshal([]byte(out), &roms), "output is not valid JSON:\n%s", out)
+
+	require.Len(t, roms, 2)
+	assert.Equal(t, "Sonic The Hedgehog (USA, Europe)", roms[0].Name)
+	assert.Equal(t, 588, roms[0].Downloads)
 }
 
 func TestSearchJSONEmptyIsArray(t *testing.T) {
 	out, err := runCLI(t, emptyPage, "search", "nothing-here", "--json")
-	if err != nil {
-		t.Fatalf("run: %v", err)
-	}
+	require.NoError(t, err)
 
-	if strings.TrimSpace(out) != "[]" {
-		t.Errorf("empty result JSON = %q, want []", strings.TrimSpace(out))
-	}
+	assert.Equal(t, "[]", strings.TrimSpace(out), "empty result must encode as [], not null")
 }
 
 func TestSearchLimit(t *testing.T) {
 	out, err := runCLI(t, searchPage, "search", "sonic", "--json", "-l", "1")
-	if err != nil {
-		t.Fatalf("run: %v", err)
-	}
+	require.NoError(t, err)
 
 	var roms []ds.ROM
-	if err := json.Unmarshal([]byte(out), &roms); err != nil {
-		t.Fatalf("bad JSON: %v", err)
-	}
-	if len(roms) != 1 {
-		t.Errorf("got %d roms with -l 1, want 1", len(roms))
-	}
+	require.NoError(t, json.Unmarshal([]byte(out), &roms))
+	assert.Len(t, roms, 1)
 }
 
 func TestSearchNoResultsMessage(t *testing.T) {
 	out, err := runCLI(t, emptyPage, "search", "nothing-here")
-	if err != nil {
-		t.Fatalf("run: %v", err)
-	}
+	require.NoError(t, err)
 
-	if !strings.Contains(out, "nothing found") {
-		t.Errorf("output = %q, want 'nothing found'", out)
-	}
+	assert.Contains(t, out, "nothing found")
 }
 
 func TestSearchEmptyQueryFails(t *testing.T) {
-	if _, err := runCLI(t, emptyPage, "search"); err == nil {
-		t.Fatal("want usage error for missing query, got nil")
-	}
-	if _, err := runCLI(t, emptyPage, "search", "   "); err == nil {
-		t.Fatal("want usage error for blank query, got nil")
-	}
+	_, err := runCLI(t, emptyPage, "search")
+	require.Error(t, err, "missing query must fail")
+
+	_, err = runCLI(t, emptyPage, "search", "   ")
+	require.Error(t, err, "blank query must fail")
 }
 
 func TestSearchUnknownColumnFails(t *testing.T) {
-	if _, err := runCLI(t, searchPage, "search", "sonic", "-c", "bogus"); err == nil {
-		t.Fatal("want error for unknown column, got nil")
-	}
+	_, err := runCLI(t, searchPage, "search", "sonic", "-c", "bogus")
+	require.Error(t, err)
 }
 
 func TestSystemsCommand(t *testing.T) {
@@ -138,7 +119,6 @@ func TestSystemsCommand(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))
 	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData"))
 
-	if _, err := runCLI(t, systemsPage, "systems"); err != nil {
-		t.Fatalf("systems: %v", err)
-	}
+	_, err := runCLI(t, systemsPage, "systems")
+	require.NoError(t, err)
 }

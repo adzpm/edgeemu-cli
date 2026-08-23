@@ -7,10 +7,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v3"
 
 	"github.com/adzpm/edgeemu-cli/cache"
@@ -24,13 +25,14 @@ const systemsPage = `<select name="system">
 <option value="sega-genesis">Sega Mega Drive / Genesis</option>
 </select>`
 
+// sandboxCacheDir points the user cache directory into a temp dir on any OS.
 func sandboxCacheDir(t *testing.T) {
 	t.Helper()
 
 	tmp := t.TempDir()
-	t.Setenv("HOME", tmp)
-	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))
-	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData"))
+	t.Setenv("HOME", tmp)                                        // darwin
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))     // linux
+	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData")) // windows
 }
 
 // runSearchComplete invokes the completion func as the shell script would,
@@ -63,20 +65,14 @@ func TestSearchCompletesSystemsFromCacheWithoutNetwork(t *testing.T) {
 	edge := client.New(client.WithBaseURL(srv.URL))
 
 	// Prefill the cache, as a prior command or completion would have.
-	if _, err := cache.Systems(context.Background(), edge, false); err != nil {
-		t.Fatalf("prefill cache: %v", err)
-	}
+	_, err := cache.Systems(context.Background(), edge, false)
+	require.NoError(t, err)
 
 	out := runSearchComplete(t, edge, "-s")
 
-	if hits.Load() != 1 {
-		t.Errorf("network hits = %d, want 1 (completion must be served from cache)", hits.Load())
-	}
-	for _, want := range []string{"atari-2600", "sega-genesis"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("completion output missing %q:\n%s", want, out)
-		}
-	}
+	assert.EqualValues(t, 1, hits.Load(), "completion must be served from cache, not the network")
+	assert.Contains(t, out, "atari-2600")
+	assert.Contains(t, out, "sega-genesis")
 }
 
 func TestSearchCompletesSystemsByFetchingWhenNoCache(t *testing.T) {
@@ -89,9 +85,7 @@ func TestSearchCompletesSystemsByFetchingWhenNoCache(t *testing.T) {
 
 	out := runSearchComplete(t, client.New(client.WithBaseURL(srv.URL)), "--system")
 
-	if !strings.Contains(out, "atari-2600") {
-		t.Errorf("completion output missing systems fetched from network:\n%s", out)
-	}
+	assert.Contains(t, out, "atari-2600", "empty cache must fall back to a network fetch")
 }
 
 func TestSearchCompletesColumns(t *testing.T) {
@@ -101,8 +95,6 @@ func TestSearchCompletesColumns(t *testing.T) {
 	out := runSearchComplete(t, client.New(client.WithBaseURL("http://127.0.0.1:0")), "-c")
 
 	for _, want := range table.ColumnIDs() {
-		if !strings.Contains(out, want) {
-			t.Errorf("completion output missing column %q:\n%s", want, out)
-		}
+		assert.Contains(t, out, want)
 	}
 }

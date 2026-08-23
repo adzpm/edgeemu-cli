@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/adzpm/edgeemu-cli/ds"
 )
 
@@ -12,9 +15,7 @@ func TestFitWidthsToNoConstraintWhenFits(t *testing.T) {
 	headers := []string{"A", "B"}
 	rows := [][]string{{"aa", "bb"}}
 
-	if got := fitWidthsTo(headers, rows, 200); got != nil {
-		t.Errorf("fitWidthsTo = %v, want nil when the table already fits", got)
-	}
+	assert.Nil(t, fitWidthsTo(headers, rows, 200), "no constraints needed when the table already fits")
 }
 
 func TestFitWidthsToShrinksWidestFirst(t *testing.T) {
@@ -24,25 +25,17 @@ func TestFitWidthsToShrinksWidestFirst(t *testing.T) {
 	}
 
 	widths := fitWidthsTo(headers, rows, 40)
-	if widths == nil {
-		t.Fatal("fitWidthsTo = nil, want constrained widths")
-	}
+	require.NotNil(t, widths)
 
 	// Narrow columns keep their natural width; only the widest shrinks.
-	if widths[0] != 3 { // "1" + padding
-		t.Errorf("col 0 width = %d, want 3", widths[0])
-	}
-	if widths[1] != 7 { // "Short" + padding
-		t.Errorf("col 1 width = %d, want 7", widths[1])
-	}
+	assert.Equal(t, 3, widths[0], `"1" plus cell padding`)
+	assert.Equal(t, 7, widths[1], `"Short" plus cell padding`)
 
-	total := len(headers) + 1
+	total := len(headers) + 1 // vertical borders
 	for i := range headers {
 		total += widths[i]
 	}
-	if total != 40 {
-		t.Errorf("total width = %d, want exactly 40", total)
-	}
+	assert.Equal(t, 40, total, "squeezed table must use exactly the terminal width")
 }
 
 func TestFitWidthsToRespectsMinimum(t *testing.T) {
@@ -50,14 +43,10 @@ func TestFitWidthsToRespectsMinimum(t *testing.T) {
 	rows := [][]string{{strings.Repeat("a", 50), strings.Repeat("b", 50), strings.Repeat("c", 50)}}
 
 	widths := fitWidthsTo(headers, rows, 10) // impossible to fit
-	if widths == nil {
-		t.Fatal("fitWidthsTo = nil, want constrained widths")
-	}
+	require.NotNil(t, widths)
 
 	for i, w := range widths {
-		if w < minColWidth {
-			t.Errorf("col %d width = %d, below minimum %d", i, w, minColWidth)
-		}
+		assert.GreaterOrEqual(t, w, minColWidth, "column %d shrunk below the minimum", i)
 	}
 }
 
@@ -65,56 +54,31 @@ func TestFitWidthsToRaggedRowsDoNotPanic(t *testing.T) {
 	headers := []string{"A"}
 	rows := [][]string{{"a", "extra", "columns"}}
 
-	// Must not panic on rows longer than headers.
-	fitWidthsTo(headers, rows, 10)
+	assert.NotPanics(t, func() { fitWidthsTo(headers, rows, 10) })
 }
 
 func TestColumnIDsOrder(t *testing.T) {
-	want := []string{"name", "system", "size", "unpacked", "dls", "hash", "url"}
-	got := ColumnIDs()
-
-	if len(got) != len(want) {
-		t.Fatalf("ColumnIDs() = %v, want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("ColumnIDs() = %v, want %v", got, want)
-		}
-	}
+	assert.Equal(t, []string{"name", "system", "size", "unpacked", "dls", "hash", "url"}, ColumnIDs())
 }
 
 func TestSelectColumns(t *testing.T) {
 	// Requested out of order, with noise in case and spacing:
 	// the result must follow canonical display order.
 	cols, err := selectColumns([]string{" URL ", "Name", "size"})
-	if err != nil {
-		t.Fatalf("selectColumns: %v", err)
-	}
+	require.NoError(t, err)
 
 	got := make([]string, len(cols))
 	for i, c := range cols {
 		got[i] = c.id
 	}
 
-	want := []string{"name", "size", "url"}
-	if len(got) != len(want) {
-		t.Fatalf("selected %v, want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("selected %v, want %v", got, want)
-		}
-	}
+	assert.Equal(t, []string{"name", "size", "url"}, got)
 }
 
 func TestSelectColumnsUnknown(t *testing.T) {
 	_, err := selectColumns([]string{"name", "bogus"})
-	if err == nil {
-		t.Fatal("want error for unknown column, got nil")
-	}
-	if !strings.Contains(err.Error(), "bogus") {
-		t.Errorf("error %q does not name the bad column", err)
-	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "bogus", "error must name the bad column")
 }
 
 // captureStdout runs fn while redirecting os.Stdout into a pipe and
@@ -125,9 +89,7 @@ func captureStdout(t *testing.T, fn func() error) string {
 
 	orig := os.Stdout
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("pipe: %v", err)
-	}
+	require.NoError(t, err)
 	os.Stdout = w
 
 	done := make(chan string)
@@ -150,9 +112,7 @@ func captureStdout(t *testing.T, fn func() error) string {
 	os.Stdout = orig
 	out := <-done
 
-	if fnErr != nil {
-		t.Fatalf("render: %v", fnErr)
-	}
+	require.NoError(t, fnErr)
 	return out
 }
 
@@ -167,22 +127,16 @@ func TestPrintROMs(t *testing.T) {
 	})
 
 	for _, want := range []string{"Name", "DLs", "Sonic & Knuckles (World)", "341", "432"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("output missing %q:\n%s", want, out)
-		}
+		assert.Contains(t, out, want)
 	}
 	for _, banned := range []string{"https://example.com/1.zip", "Sega Mega Drive", "4DCFD55C"} {
-		if strings.Contains(out, banned) {
-			t.Errorf("output contains %q from an unselected column:\n%s", banned, out)
-		}
+		assert.NotContains(t, out, banned, "unselected column leaked into output")
 	}
 }
 
 func TestPrintROMsUnknownColumn(t *testing.T) {
 	err := PrintROMs([]ds.ROM{{Name: "x"}}, []string{"nope"})
-	if err == nil {
-		t.Fatal("want error for unknown column, got nil")
-	}
+	require.Error(t, err)
 }
 
 func TestPrintSystems(t *testing.T) {
@@ -196,8 +150,6 @@ func TestPrintSystems(t *testing.T) {
 	})
 
 	for _, want := range []string{"ID", "atari-2600", "Sega Mega Drive / Genesis"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("output missing %q:\n%s", want, out)
-		}
+		assert.Contains(t, out, want)
 	}
 }

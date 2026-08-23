@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/adzpm/edgeemu-cli/client"
 	"github.com/adzpm/edgeemu-cli/ds"
 )
@@ -50,26 +53,14 @@ func TestSystemsFetchesOnceThenServesFromCache(t *testing.T) {
 	edge := newTestClient(t, &hits)
 
 	first, err := Systems(context.Background(), edge, false)
-	if err != nil {
-		t.Fatalf("first Systems: %v", err)
-	}
-	if len(first) != 2 {
-		t.Fatalf("got %d systems, want 2", len(first))
-	}
-	if hits.Load() != 1 {
-		t.Fatalf("hits = %d, want 1", hits.Load())
-	}
+	require.NoError(t, err)
+	require.Len(t, first, 2)
+	require.EqualValues(t, 1, hits.Load())
 
 	second, err := Systems(context.Background(), edge, false)
-	if err != nil {
-		t.Fatalf("second Systems: %v", err)
-	}
-	if hits.Load() != 1 {
-		t.Fatalf("hits = %d after second call, want 1 (must be served from cache)", hits.Load())
-	}
-	if len(second) != len(first) {
-		t.Fatalf("cached result differs: %d vs %d systems", len(second), len(first))
-	}
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, hits.Load(), "second call must be served from cache")
+	assert.Equal(t, first, second)
 }
 
 func TestSystemsRefreshBypassesCache(t *testing.T) {
@@ -78,16 +69,13 @@ func TestSystemsRefreshBypassesCache(t *testing.T) {
 	var hits atomic.Int32
 	edge := newTestClient(t, &hits)
 
-	if _, err := Systems(context.Background(), edge, false); err != nil {
-		t.Fatalf("first Systems: %v", err)
-	}
-	if _, err := Systems(context.Background(), edge, true); err != nil {
-		t.Fatalf("refresh Systems: %v", err)
-	}
+	_, err := Systems(context.Background(), edge, false)
+	require.NoError(t, err)
 
-	if hits.Load() != 2 {
-		t.Fatalf("hits = %d, want 2 (refresh must hit the network)", hits.Load())
-	}
+	_, err = Systems(context.Background(), edge, true)
+	require.NoError(t, err)
+
+	assert.EqualValues(t, 2, hits.Load(), "refresh must hit the network")
 }
 
 func TestLoadExpiry(t *testing.T) {
@@ -95,51 +83,32 @@ func TestLoadExpiry(t *testing.T) {
 
 	// Write a cache stamped older than the TTL directly.
 	p, err := path()
-	if err != nil {
-		t.Fatalf("path: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 
 	stale := systemsCache{
 		FetchedAt: time.Now().Add(-TTL - time.Hour),
 		Systems:   []ds.System{{ID: "atari-2600", Name: "Atari 2600"}},
 	}
-	data, _ := json.Marshal(stale)
-	if err := os.WriteFile(p, data, 0o644); err != nil {
-		t.Fatalf("write cache: %v", err)
-	}
+	data, err := json.Marshal(stale)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(p, data, 0o644))
 
-	if got := Load(TTL); got != nil {
-		t.Errorf("Load(TTL) = %d systems, want nil for expired cache", len(got))
-	}
-	if got := Load(0); len(got) != 1 {
-		t.Errorf("Load(0) = %d systems, want 1 (zero maxAge accepts any age)", len(got))
-	}
+	assert.Nil(t, Load(TTL), "expired cache must not be returned")
+	assert.Len(t, Load(0), 1, "zero maxAge accepts a cache of any age")
 }
 
 func TestLoadMissingAndCorrupt(t *testing.T) {
 	sandboxCacheDir(t)
 
-	if got := Load(0); got != nil {
-		t.Errorf("Load with no cache file = %v, want nil", got)
-	}
+	assert.Nil(t, Load(0), "missing cache file must load as nil")
 
 	p, err := path()
-	if err != nil {
-		t.Fatalf("path: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(p, []byte("{not json"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
+	require.NoError(t, os.WriteFile(p, []byte("{not json"), 0o644))
 
-	if got := Load(0); got != nil {
-		t.Errorf("Load with corrupt cache = %v, want nil", got)
-	}
+	assert.Nil(t, Load(0), "corrupt cache file must load as nil")
 }
 
 func TestSystemsFetchErrorIsReturned(t *testing.T) {
@@ -151,7 +120,6 @@ func TestSystemsFetchErrorIsReturned(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	edge := client.New(client.WithBaseURL(srv.URL))
-	if _, err := Systems(context.Background(), edge, false); err == nil {
-		t.Fatal("want error when fetch fails and no cache exists, got nil")
-	}
+	_, err := Systems(context.Background(), edge, false)
+	require.Error(t, err, "fetch failure with no cache must surface")
 }

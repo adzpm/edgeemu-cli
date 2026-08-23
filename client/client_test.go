@@ -2,10 +2,14 @@ package client
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // searchPage mimics the real edgeemu.net search results markup: one item
@@ -65,50 +69,24 @@ func TestSearch(t *testing.T) {
 	})
 
 	roms, err := c.Search(context.Background(), "sonic & co", "sega-genesis")
-	if err != nil {
-		t.Fatalf("Search: %v", err)
-	}
+	require.NoError(t, err)
 
-	if gotMethod != http.MethodPost {
-		t.Errorf("method = %s, want POST", gotMethod)
-	}
-	if gotQuery != "sonic & co" {
-		t.Errorf("search form value = %q, want %q", gotQuery, "sonic & co")
-	}
-	if gotSystem != "sega-genesis" {
-		t.Errorf("system form value = %q, want %q", gotSystem, "sega-genesis")
-	}
+	assert.Equal(t, http.MethodPost, gotMethod)
+	assert.Equal(t, "sonic & co", gotQuery)
+	assert.Equal(t, "sega-genesis", gotSystem)
 
-	if len(roms) != 2 {
-		t.Fatalf("got %d roms, want 2", len(roms))
-	}
+	require.Len(t, roms, 2)
 
 	first := roms[0]
-	if first.Name != "Sonic & Knuckles (World)" {
-		t.Errorf("Name = %q, want unescaped ampersand", first.Name)
-	}
-	if want := c.baseURL + "/download/sega-genesis/Sonic%20%26%20Knuckles%20%28World%29.zip"; first.URL != want {
-		t.Errorf("URL = %q, want %q", first.URL, want)
-	}
-	if first.Size != "1.36m" {
-		t.Errorf("Size = %q, want 1.36m", first.Size)
-	}
-	if first.Downloads != 341 {
-		t.Errorf("Downloads = %d, want 341", first.Downloads)
-	}
-	if first.System != "Sega Mega Drive / Genesis" {
-		t.Errorf("System = %q", first.System)
-	}
-	if first.UnpackedSize != "256.00k" {
-		t.Errorf("UnpackedSize = %q, want 256.00k", first.UnpackedSize)
-	}
-	if first.Hash != "4DCFD55C 0658F691" {
-		t.Errorf("Hash = %q", first.Hash)
-	}
+	assert.Equal(t, "Sonic & Knuckles (World)", first.Name, "entities must be unescaped")
+	assert.Equal(t, c.baseURL+"/download/sega-genesis/Sonic%20%26%20Knuckles%20%28World%29.zip", first.URL)
+	assert.Equal(t, "1.36m", first.Size)
+	assert.Equal(t, 341, first.Downloads)
+	assert.Equal(t, "Sega Mega Drive / Genesis", first.System)
+	assert.Equal(t, "256.00k", first.UnpackedSize)
+	assert.Equal(t, "4DCFD55C 0658F691", first.Hash)
 
-	if roms[1].Hash != "" {
-		t.Errorf("empty hash parsed as %q, want empty", roms[1].Hash)
-	}
+	assert.Empty(t, roms[1].Hash, "empty hash must parse as empty string")
 }
 
 func TestSearchNoResults(t *testing.T) {
@@ -117,12 +95,8 @@ func TestSearchNoResults(t *testing.T) {
 	})
 
 	roms, err := c.Search(context.Background(), "zzz", "all")
-	if err != nil {
-		t.Fatalf("Search: %v", err)
-	}
-	if len(roms) != 0 {
-		t.Fatalf("got %d roms, want 0", len(roms))
-	}
+	require.NoError(t, err)
+	assert.Empty(t, roms)
 }
 
 func TestSearchHTTPError(t *testing.T) {
@@ -130,46 +104,39 @@ func TestSearchHTTPError(t *testing.T) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	})
 
-	if _, err := c.Search(context.Background(), "sonic", "all"); err == nil {
-		t.Fatal("want error on HTTP 500, got nil")
-	}
+	_, err := c.Search(context.Background(), "sonic", "all")
+	require.Error(t, err)
 }
 
 func TestSearchContextCancelled(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		// Drain the body first: the server only notices a dropped client
+		// (and cancels r.Context()) once the request body is consumed.
+		io.Copy(io.Discard, r.Body)
 		<-r.Context().Done()
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	if _, err := c.Search(ctx, "sonic", "all"); err == nil {
-		t.Fatal("want error on cancelled context, got nil")
-	}
+	_, err := c.Search(ctx, "sonic", "all")
+	require.Error(t, err)
 }
 
 func TestSystems(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %s, want GET", r.Method)
-		}
+		assert.Equal(t, http.MethodGet, r.Method)
 		w.Write([]byte(systemsPage))
 	})
 
 	systems, err := c.Systems(context.Background())
-	if err != nil {
-		t.Fatalf("Systems: %v", err)
-	}
+	require.NoError(t, err)
 
-	if len(systems) != 3 {
-		t.Fatalf("got %d systems, want 3 (the 'all' option must be skipped)", len(systems))
-	}
-	if systems[0].ID != "atari-2600" || systems[0].Name != "Atari 2600" {
-		t.Errorf("first system = %+v", systems[0])
-	}
-	if systems[1].ID != "sega-genesis" {
-		t.Errorf("second system = %+v", systems[1])
-	}
+	require.Len(t, systems, 3, "the 'all' option must be skipped")
+	assert.Equal(t, "atari-2600", systems[0].ID)
+	assert.Equal(t, "Atari 2600", systems[0].Name)
+	assert.Equal(t, "sega-genesis", systems[1].ID)
+	assert.Equal(t, "Microsoft MSX / MSX2", systems[2].Name)
 }
 
 func TestSystemsEmptyPageIsError(t *testing.T) {
@@ -177,9 +144,8 @@ func TestSystemsEmptyPageIsError(t *testing.T) {
 		w.Write([]byte(`<html><body>layout changed</body></html>`))
 	})
 
-	if _, err := c.Systems(context.Background()); err == nil {
-		t.Fatal("want error when no systems parsed, got nil")
-	}
+	_, err := c.Systems(context.Background())
+	require.Error(t, err, "zero parsed systems must be reported, not cached")
 }
 
 func TestSystemsHTTPError(t *testing.T) {
@@ -187,21 +153,16 @@ func TestSystemsHTTPError(t *testing.T) {
 		http.Error(w, "boom", http.StatusBadGateway)
 	})
 
-	if _, err := c.Systems(context.Background()); err == nil {
-		t.Fatal("want error on HTTP 502, got nil")
-	}
+	_, err := c.Systems(context.Background())
+	require.Error(t, err)
 }
 
 func TestWithBaseURLTrimsTrailingSlash(t *testing.T) {
 	c := New(WithBaseURL("https://example.com///"))
-	if c.baseURL != "https://example.com" {
-		t.Errorf("baseURL = %q, want trailing slashes trimmed", c.baseURL)
-	}
+	assert.Equal(t, "https://example.com", c.baseURL)
 }
 
 func TestWithHTTPClientNilIgnored(t *testing.T) {
 	c := New(WithHTTPClient(nil))
-	if c.http == nil {
-		t.Fatal("nil http client applied, default lost")
-	}
+	assert.NotNil(t, c.http, "nil http client must not replace the default")
 }

@@ -3,6 +3,9 @@ package ds
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestROMJSONTags(t *testing.T) {
@@ -17,40 +20,23 @@ func TestROMJSONTags(t *testing.T) {
 	}
 
 	data, err := json.Marshal(rom)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
+	require.NoError(t, err)
 
 	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatalf("unmarshal into map: %v", err)
-	}
+	require.NoError(t, json.Unmarshal(data, &m))
 
 	for _, key := range []string{"name", "system", "url", "size", "unpacked_size", "downloads", "hash"} {
-		if _, ok := m[key]; !ok {
-			t.Errorf("JSON output missing key %q (tag changed?): %s", key, data)
-		}
+		assert.Contains(t, m, key, "JSON tag changed?")
 	}
 
 	var back ROM
-	if err := json.Unmarshal(data, &back); err != nil {
-		t.Fatalf("unmarshal back: %v", err)
-	}
-	if back != rom {
-		t.Errorf("round trip mismatch:\ngot  %+v\nwant %+v", back, rom)
-	}
+	require.NoError(t, json.Unmarshal(data, &back))
+	assert.Equal(t, rom, back, "JSON round trip must be lossless")
 }
 
 func TestSystemJSONTags(t *testing.T) {
-	sys := System{ID: "sega-genesis", Name: "Sega Mega Drive / Genesis"}
+	data, err := json.Marshal(System{ID: "sega-genesis", Name: "Sega Mega Drive / Genesis"})
+	require.NoError(t, err)
 
-	data, err := json.Marshal(sys)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-
-	want := `{"id":"sega-genesis","name":"Sega Mega Drive / Genesis"}`
-	if string(data) != want {
-		t.Errorf("marshal = %s, want %s", data, want)
-	}
+	assert.JSONEq(t, `{"id":"sega-genesis","name":"Sega Mega Drive / Genesis"}`, string(data))
 }

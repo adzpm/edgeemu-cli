@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v3"
 
 	"github.com/adzpm/edgeemu-cli/client"
@@ -18,7 +19,7 @@ import (
 // slow or unreachable site: with no cache available, the network fetch
 // must be abandoned after fetchTimeout.
 func TestSearchCompletionDoesNotHang(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // empty cache dir
+	sandboxCacheDir(t) // empty cache dir
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select { // never answers in time, but frees up once the client gives up
@@ -38,7 +39,5 @@ func TestSearchCompletionDoesNotHang(t *testing.T) {
 	start := time.Now()
 	Search(edge)(context.Background(), cmd)
 
-	if elapsed := time.Since(start); elapsed > fetchTimeout+2*time.Second {
-		t.Fatalf("completion blocked for %v, want under %v", elapsed, fetchTimeout+2*time.Second)
-	}
+	assert.Less(t, time.Since(start), fetchTimeout+2*time.Second, "completion blocked the shell")
 }
