@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v3"
 
-	"github.com/adzpm/edgeemu-cli/client"
+	"github.com/adzpm/edgeemu-cli/internal/client"
 )
 
 // TestSearchCompletionDoesNotHang ensures a TAB press never blocks on a

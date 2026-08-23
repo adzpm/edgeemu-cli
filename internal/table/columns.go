@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 )
 
 // romColumn is a selectable column of the search results table.
@@ -32,6 +32,7 @@ func ColumnIDs() []string {
 	for _, c := range romColumns {
 		ids = append(ids, c.id)
 	}
+
 	return ids
 }
 
@@ -51,6 +52,7 @@ func selectColumns(ids []string) ([]romColumn, error) {
 		if !found {
 			return nil, fmt.Errorf("unknown column %q (available: %s)", id, strings.Join(ColumnIDs(), ", "))
 		}
+
 		want[id] = true
 	}
 
@@ -60,6 +62,7 @@ func selectColumns(ids []string) ([]romColumn, error) {
 			cols = append(cols, c)
 		}
 	}
+
 	return cols, nil
 }
 
@@ -83,6 +86,7 @@ func PrintROMs(roms []ds.ROM, columnIDs []string) error {
 		for _, c := range cols {
 			row = append(row, c.value(r))
 		}
+
 		rows = append(rows, row)
 	}
 
@@ -95,5 +99,6 @@ func PrintSystems(systems []ds.System) error {
 	for _, s := range systems {
 		rows = append(rows, []string{s.ID, s.Name})
 	}
+
 	return Render([]string{"ID", "Name"}, rows)
 }

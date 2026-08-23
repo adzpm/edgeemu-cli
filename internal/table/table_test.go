@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 )
 
 func TestFitWidthsToNoConstraintWhenFits(t *testing.T) {

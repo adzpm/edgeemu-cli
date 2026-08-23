@@ -10,9 +10,9 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/adzpm/edgeemu-cli/cache"
-	"github.com/adzpm/edgeemu-cli/client"
-	"github.com/adzpm/edgeemu-cli/table"
+	"github.com/adzpm/edgeemu-cli/internal/cache"
+	"github.com/adzpm/edgeemu-cli/internal/client"
+	"github.com/adzpm/edgeemu-cli/internal/table"
 )
 
 // fetchTimeout caps the network fetch during shell completion so a slow

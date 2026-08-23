@@ -9,11 +9,11 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/adzpm/edgeemu-cli/cache"
-	"github.com/adzpm/edgeemu-cli/client"
-	"github.com/adzpm/edgeemu-cli/completion"
-	"github.com/adzpm/edgeemu-cli/ds"
-	"github.com/adzpm/edgeemu-cli/table"
+	"github.com/adzpm/edgeemu-cli/internal/cache"
+	"github.com/adzpm/edgeemu-cli/internal/client"
+	"github.com/adzpm/edgeemu-cli/internal/completion"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
+	"github.com/adzpm/edgeemu-cli/internal/table"
 )
 
 var (

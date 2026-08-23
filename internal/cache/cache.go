@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/adzpm/edgeemu-cli/client"
-	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/client"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 )
 
 // TTL is how long a cached systems list is considered fresh.

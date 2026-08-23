@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 )
 
 var itemRe = regexp.MustCompile(`(?s)<details data-name="[^"]*">\s*` +

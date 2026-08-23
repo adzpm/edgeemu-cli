@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 )
 
 var optionRe = regexp.MustCompile(`<option value="([^"]+)"[^>]*>([^<]+)</option>`)

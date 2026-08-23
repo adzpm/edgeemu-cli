@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/adzpm/edgeemu-cli/client"
-	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/client"
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 	"github.com/adzpm/edgeemu-cli/internal/fixtures"
 )
 

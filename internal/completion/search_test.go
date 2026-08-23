@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v3"
 
-	"github.com/adzpm/edgeemu-cli/cache"
-	"github.com/adzpm/edgeemu-cli/client"
+	"github.com/adzpm/edgeemu-cli/internal/cache"
+	"github.com/adzpm/edgeemu-cli/internal/client"
 	"github.com/adzpm/edgeemu-cli/internal/fixtures"
-	"github.com/adzpm/edgeemu-cli/table"
+	"github.com/adzpm/edgeemu-cli/internal/table"
 )
 
 // sandboxCacheDir points the user cache directory into a temp dir on any OS.
