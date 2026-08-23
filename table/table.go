@@ -22,6 +22,11 @@ func fitWidths(headers []string, rows [][]string) tw.Mapper[int, int] {
 		return nil
 	}
 
+	return fitWidthsTo(headers, rows, termW)
+}
+
+// fitWidthsTo squeezes column widths into termW; see fitWidths.
+func fitWidthsTo(headers []string, rows [][]string, termW int) tw.Mapper[int, int] {
 	widths := make([]int, len(headers))
 	for i, h := range headers {
 		widths[i] = runewidth.StringWidth(h) + 2

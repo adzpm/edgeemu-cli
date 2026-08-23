@@ -48,10 +48,8 @@ var (
 	}
 )
 
-func main() {
-	edge := client.New()
-
-	cmd := &cli.Command{
+func newRootCmd(edge *client.Client) *cli.Command {
+	return &cli.Command{
 		Name:                  "edgeemu",
 		Usage:                 "search ROMs on edgeemu.net",
 		EnableShellCompletion: true,
@@ -88,13 +86,13 @@ func main() {
 							roms = []ds.ROM{} // encode as [], not null
 						}
 
-						enc := json.NewEncoder(os.Stdout)
+						enc := json.NewEncoder(cmd.Root().Writer)
 						enc.SetIndent("", "  ")
 						return enc.Encode(roms)
 					}
 
 					if len(roms) == 0 {
-						fmt.Println("nothing found")
+						fmt.Fprintln(cmd.Root().Writer, "nothing found")
 						return nil
 					}
 
@@ -130,8 +128,10 @@ func main() {
 			},
 		},
 	}
+}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+func main() {
+	if err := newRootCmd(client.New()).Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
