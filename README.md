@@ -5,13 +5,13 @@ CLI for searching ROMs on [edgeemu.net](https://edgeemu.net).
 ## Install
 
 ```sh
-go install github.com/adzpm/edgeemu-cli@latest
+go install github.com/adzpm/edgeemu-cli/cmd/edgeemu@latest
 ```
 
 Or build from source:
 
 ```sh
-go build -o edgeemu .
+go build -o edgeemu ./cmd/edgeemu
 ```
 
 ## Usage
