@@ -68,7 +68,27 @@ func store(systems []ds.System) {
 		return
 	}
 
-	_ = os.WriteFile(p, data, 0o644)
+	// Write via a temp file and rename so concurrent readers (e.g. shell
+	// completion) never observe a partially written cache.
+	tmp, err := os.CreateTemp(filepath.Dir(p), ".systems-*")
+	if err != nil {
+		return
+	}
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return
+	}
+
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return
+	}
+
+	if os.Chmod(tmp.Name(), 0o644) != nil || os.Rename(tmp.Name(), p) != nil {
+		os.Remove(tmp.Name())
+	}
 }
 
 // Systems returns the systems list, preferring a fresh cache over the

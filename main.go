@@ -12,6 +12,7 @@ import (
 	"github.com/adzpm/edgeemu-cli/cache"
 	"github.com/adzpm/edgeemu-cli/client"
 	"github.com/adzpm/edgeemu-cli/completion"
+	"github.com/adzpm/edgeemu-cli/ds"
 	"github.com/adzpm/edgeemu-cli/table"
 )
 
@@ -68,7 +69,7 @@ func main() {
 				},
 				ShellComplete: completion.Search(edge),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					query := strings.Join(cmd.Args().Slice(), " ")
+					query := strings.TrimSpace(strings.Join(cmd.Args().Slice(), " "))
 					if query == "" {
 						return fmt.Errorf("usage: edgeemu search <query>")
 					}
@@ -83,6 +84,10 @@ func main() {
 					}
 
 					if cmd.Bool(jsonFlag.Name) {
+						if roms == nil {
+							roms = []ds.ROM{} // encode as [], not null
+						}
+
 						enc := json.NewEncoder(os.Stdout)
 						enc.SetIndent("", "  ")
 						return enc.Encode(roms)

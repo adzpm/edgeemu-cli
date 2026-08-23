@@ -43,7 +43,7 @@ func (c *Client) Search(ctx context.Context, query, system string) ([]ds.ROM, er
 		return nil, fmt.Errorf("search failed: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (c *Client) Search(ctx context.Context, query, system string) ([]ds.ROM, er
 		dls, _ := strconv.Atoi(m[4])
 		roms = append(roms, ds.ROM{
 			Name:         html.UnescapeString(m[1]),
-			URL:          c.baseURL + m[2],
+			URL:          c.baseURL + html.UnescapeString(m[2]),
 			Size:         strings.TrimSpace(m[3]),
 			Downloads:    dls,
 			System:       html.UnescapeString(m[5]),

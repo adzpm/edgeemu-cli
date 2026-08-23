@@ -28,6 +28,9 @@ func fitWidths(headers []string, rows [][]string) tw.Mapper[int, int] {
 	}
 	for _, row := range rows {
 		for i, c := range row {
+			if i >= len(widths) {
+				break
+			}
 			if w := runewidth.StringWidth(c) + 2; w > widths[i] {
 				widths[i] = w
 			}

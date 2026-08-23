@@ -31,7 +31,7 @@ func (c *Client) Systems(ctx context.Context) ([]ds.System, error) {
 		return nil, fmt.Errorf("request failed: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +43,12 @@ func (c *Client) Systems(ctx context.Context) ([]ds.System, error) {
 			continue
 		}
 		systems = append(systems, ds.System{ID: m[1], Name: html.UnescapeString(m[2])})
+	}
+
+	// Zero systems means the page layout changed and parsing broke;
+	// erroring here also keeps the empty list out of the cache.
+	if len(systems) == 0 {
+		return nil, fmt.Errorf("no systems parsed from %s/search.php: page layout may have changed", c.baseURL)
 	}
 
 	return systems, nil
