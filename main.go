@@ -9,7 +9,10 @@ import (
 
 	"github.com/urfave/cli/v3"
 
+	"github.com/adzpm/edgeemu-cli/cache"
 	"github.com/adzpm/edgeemu-cli/client"
+	"github.com/adzpm/edgeemu-cli/completion"
+	"github.com/adzpm/edgeemu-cli/table"
 )
 
 var (
@@ -34,7 +37,13 @@ var (
 	columnsFlag = &cli.StringSliceFlag{
 		Name:    "columns",
 		Aliases: []string{"c"},
-		Usage:   "columns to show, comma-separated (" + strings.Join(columnIDs(), ", ") + ")",
+		Usage:   "columns to show, comma-separated (" + strings.Join(table.ColumnIDs(), ", ") + ")",
+	}
+
+	refreshFlag = &cli.BoolFlag{
+		Name:    "refresh",
+		Aliases: []string{"r"},
+		Usage:   "bypass the cache and refetch",
 	}
 )
 
@@ -42,8 +51,9 @@ func main() {
 	edge := client.New()
 
 	cmd := &cli.Command{
-		Name:  "edgeemu",
-		Usage: "search ROMs on edgeemu.net",
+		Name:                  "edgeemu",
+		Usage:                 "search ROMs on edgeemu.net",
+		EnableShellCompletion: true,
 		Commands: []*cli.Command{
 			{
 				Name:      "search",
@@ -56,6 +66,7 @@ func main() {
 					limitFlag,
 					columnsFlag,
 				},
+				ShellComplete: completion.Search(edge),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					query := strings.Join(cmd.Args().Slice(), " ")
 					if query == "" {
@@ -90,20 +101,27 @@ func main() {
 						}
 					}
 
-					return printROMs(roms, columns)
+					return table.PrintROMs(roms, columns)
 				},
 			},
 			{
 				Name:  "systems",
 				Usage: "list available systems",
+				Flags: []cli.Flag{refreshFlag},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					systems, err := edge.Systems(ctx)
+					systems, err := cache.Systems(ctx, edge, cmd.Bool(refreshFlag.Name))
 					if err != nil {
 						return err
 					}
 
-					return printSystems(systems)
+					return table.PrintSystems(systems)
 				},
+			},
+			{
+				Name:      "install-completion",
+				Usage:     "install shell completion (zsh, bash, or fish)",
+				ArgsUsage: "[shell]",
+				Action:    completion.Install,
 			},
 		},
 	}
