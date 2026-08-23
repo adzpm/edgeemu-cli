@@ -16,13 +16,8 @@ import (
 
 	"github.com/adzpm/edgeemu-cli/client"
 	"github.com/adzpm/edgeemu-cli/ds"
+	"github.com/adzpm/edgeemu-cli/internal/fixtures"
 )
-
-const systemsPage = `<select name="system">
-<option value="all" selected>Search all</option>
-<option value="atari-2600">Atari 2600</option>
-<option value="sega-genesis">Sega Mega Drive / Genesis</option>
-</select>`
 
 // sandboxCacheDir points the user cache directory into a temp dir on any OS.
 func sandboxCacheDir(t *testing.T) {
@@ -39,7 +34,7 @@ func newTestClient(t *testing.T, hits *atomic.Int32) *client.Client {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits.Add(1)
-		w.Write([]byte(systemsPage))
+		w.Write([]byte(fixtures.SystemsPage))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -54,7 +49,7 @@ func TestSystemsFetchesOnceThenServesFromCache(t *testing.T) {
 
 	first, err := Systems(context.Background(), edge, false)
 	require.NoError(t, err)
-	require.Len(t, first, 2)
+	require.Len(t, first, 3)
 	require.EqualValues(t, 1, hits.Load())
 
 	second, err := Systems(context.Background(), edge, false)

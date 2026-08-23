@@ -10,44 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/adzpm/edgeemu-cli/internal/fixtures"
 )
-
-// searchPage mimics the real edgeemu.net search results markup: one item
-// with HTML entities, one plain, both wrapped in the surrounding page.
-const searchPage = `<!DOCTYPE html>
-<html><body>
-<h1>search results for sonic</h1>
-<div class="grid">
-  <div class="item">
-    <details data-name="Sonic &amp; Knuckles (World).zip">
-      <summary>Sonic &amp; Knuckles (World)</summary>
-      <p><a href="/download/sega-genesis/Sonic%20%26%20Knuckles%20%28World%29.zip">download</a> (<span>1.36m, 341 DLs</span>)</p>
-      <p>system: <span>Sega Mega Drive / Genesis</span></p>
-      <p>unpacked size: <span>256.00k</span></p>
-      <p>hash: <span>4DCFD55C 0658F691</span></p>
-    </details>
-  </div>
-  <div class="item">
-    <details data-name="Sonic The Hedgehog (USA, Europe).zip">
-      <summary>Sonic The Hedgehog (USA, Europe)</summary>
-      <p><a href="/download/sega-genesis/Sonic%20The%20Hedgehog%20%28USA%2C%20Europe%29.zip">download</a> (<span>377.87k, 588 DLs</span>)</p>
-      <p>system: <span>Sega Mega Drive / Genesis</span></p>
-      <p>unpacked size: <span>512.00k</span></p>
-      <p>hash: <span></span></p>
-    </details>
-  </div>
-</div>
-</body></html>`
-
-const systemsPage = `<!DOCTYPE html>
-<html><body>
-<select name="system" class="dropdown">
-  <option value="all" selected>Search all, or select from the list</option>
-  <option value="atari-2600">Atari 2600</option>
-  <option value="sega-genesis">Sega Mega Drive / Genesis</option>
-  <option value="microsoft-msx">Microsoft MSX / MSX2</option>
-</select>
-</body></html>`
 
 func newTestClient(t *testing.T, handler http.HandlerFunc) *Client {
 	t.Helper()
@@ -65,7 +30,7 @@ func TestSearch(t *testing.T) {
 		gotMethod = r.Method
 		gotQuery = r.FormValue("search")
 		gotSystem = r.FormValue("system")
-		w.Write([]byte(searchPage))
+		w.Write([]byte(fixtures.SearchPage))
 	})
 
 	roms, err := c.Search(context.Background(), "sonic & co", "sega-genesis")
@@ -91,7 +56,7 @@ func TestSearch(t *testing.T) {
 
 func TestSearchNoResults(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html><body><h1>search results for zzz</h1><div class="grid"></div></body></html>`))
+		w.Write([]byte(fixtures.EmptyPage))
 	})
 
 	roms, err := c.Search(context.Background(), "zzz", "all")
@@ -126,7 +91,7 @@ func TestSearchContextCancelled(t *testing.T) {
 func TestSystems(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
-		w.Write([]byte(systemsPage))
+		w.Write([]byte(fixtures.SystemsPage))
 	})
 
 	systems, err := c.Systems(context.Background())

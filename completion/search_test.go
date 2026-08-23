@@ -16,14 +16,9 @@ import (
 
 	"github.com/adzpm/edgeemu-cli/cache"
 	"github.com/adzpm/edgeemu-cli/client"
+	"github.com/adzpm/edgeemu-cli/internal/fixtures"
 	"github.com/adzpm/edgeemu-cli/table"
 )
-
-const systemsPage = `<select name="system">
-<option value="all" selected>Search all</option>
-<option value="atari-2600">Atari 2600</option>
-<option value="sega-genesis">Sega Mega Drive / Genesis</option>
-</select>`
 
 // sandboxCacheDir points the user cache directory into a temp dir on any OS.
 func sandboxCacheDir(t *testing.T) {
@@ -58,7 +53,7 @@ func TestSearchCompletesSystemsFromCacheWithoutNetwork(t *testing.T) {
 	var hits atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits.Add(1)
-		w.Write([]byte(systemsPage))
+		w.Write([]byte(fixtures.SystemsPage))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -79,7 +74,7 @@ func TestSearchCompletesSystemsByFetchingWhenNoCache(t *testing.T) {
 	sandboxCacheDir(t)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(systemsPage))
+		w.Write([]byte(fixtures.SystemsPage))
 	}))
 	t.Cleanup(srv.Close)
 
