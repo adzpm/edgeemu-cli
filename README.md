@@ -9,7 +9,8 @@
 
 CLI for searching ROMs on [edgeemu.net](https://edgeemu.net).
 
-> **Note:** this is an information tool only — see the [disclaimer](#disclaimer).
+> **Note:** edgeemu-cli only finds and shows information — what you do with the links is entirely up to you.
+> See the [disclaimer](#disclaimer).
 
 ## Install
 
@@ -49,7 +50,7 @@ edgeemu search sonic                          # search all systems
 edgeemu search sonic -s sega-genesis          # search a specific system
 edgeemu search sonic -l 10                    # limit results
 edgeemu search sonic -c name,size,dls,url     # pick fields to show
-edgeemu search sonic -f json                  # machine-readable output (json, yaml, xml or csv)
+edgeemu search sonic -f json                  # machine-readable output, see Formats below
 ```
 
 The default `list` format never truncates anything, and download URLs sit alone on their own line so the terminal always
@@ -65,9 +66,50 @@ keeps them clickable:
    https://edgeemu.net/[...]/sega-genesis/[...].zip
 ```
 
-Every field is shown by default. Use `-c` to narrow the output to specific fields: `name`, `system`, `size`, `unpacked`,
-`dls`, `hash`, `url`. The selection applies to every output format — in `json`, `yaml`, `xml` and `csv` the field IDs
-are used as keys (or the header row), and only the selected fields are encoded.
+Every field is shown by default. Use `-c` to narrow the output to specific fields (see [Columns](#columns) below).
+The selection applies to every output format — in `json`, `yaml`, `xml` and `csv` the field IDs are used as keys
+(or the header row), and only the selected fields are encoded.
+
+### Columns
+
+All fields available for `-c/--columns`, in their display order:
+
+| ID         | Description                        | Example                                    |
+|------------|------------------------------------|--------------------------------------------|
+| `name`     | ROM title as listed on the site    | `Sonic The Hedgehog (USA, Europe)`         |
+| `system`   | Console / platform                 | `Sega Mega Drive / Genesis`                |
+| `size`     | Download (archive) size            | `377.87k`                                  |
+| `unpacked` | Unpacked ROM size                  | `512.00k`                                  |
+| `dls`      | Download counter                   | `588`                                      |
+| `hash`     | CRC hash of the ROM                | `F9394E97`                                 |
+| `url`      | Direct download link               | `https://edgeemu.net/download/…/….zip`     |
+
+```sh
+edgeemu search sonic -c name,hash             # just names and hashes
+edgeemu search sonic -c url -f csv            # a plain list of links
+```
+
+The same IDs are suggested by shell completion after `-c`.
+
+### Formats
+
+All values available for `-f/--format`, for both `search` and `systems`:
+
+| ID     | Description                                                                             |
+|--------|-----------------------------------------------------------------------------------------|
+| `list` | Human-readable list (default): numbered names, fields on one line, URL on its own line  |
+| `json` | Indented JSON array                                                                     |
+| `yaml` | YAML sequence                                                                           |
+| `xml`  | XML document rooted at `<roms>` / `<systems>`                                           |
+| `csv`  | Comma-separated values with a header row                                                |
+
+```sh
+edgeemu search sonic -f json -c name,dls      # [{"name": "...", "dls": 588}, ...]
+edgeemu systems -f yaml                       # - id: atari-2600 ...
+```
+
+An empty search result encodes as an empty list (`[]`, `<roms></roms>`, or a lone CSV header), never as `null`.
+The same IDs are suggested by shell completion after `-f`.
 
 > Note: the site returns at most 100 results per query. If you hit exactly 100,
 > narrow the query or search within a specific system via `-s`.
@@ -76,7 +118,7 @@ are used as keys (or the header row), and only the selected fields are encoded.
 
 ```sh
 edgeemu systems            # list all system IDs for the -s flag
-edgeemu systems -f json    # machine-readable output (json, yaml, xml or csv)
+edgeemu systems -f json    # machine-readable output, see Formats above
 edgeemu systems -r         # refresh the cached list
 ```
 
@@ -122,14 +164,22 @@ task --list       # everything else
 |-----------------|-----------------|---------------------------------------------|
 | `-s, --system`  | search          | System to search in (default: all)          |
 | `-l, --limit`   | search          | Max results to show                         |
-| `-c, --columns` | search          | Comma-separated fields to show              |
-| `-f, --format`  | search, systems | Output format: list, json, yaml, xml or csv |
+| `-c, --columns` | search          | Fields to show, see [Columns](#columns)     |
+| `-f, --format`  | search, systems | Output format, see [Formats](#formats)      |
 | `-r, --refresh` | systems         | Bypass the cache and refetch                |
 
 ## Disclaimer
 
-edgeemu-cli is an **information tool**: it queries the public search on edgeemu.net and displays the metadata and links
-that the site itself publishes — nothing more. It has **no download functionality**, does not host or distribute any ROM
-files, and does not bypass any access controls or copyright protection. Whether obtaining a particular ROM is lawful
-depends on your jurisdiction and on whether you own the original media — that responsibility lies entirely with you.
+**What this tool is.** edgeemu-cli is an **information tool**: a convenient search interface over the public search of
+edgeemu.net. It queries that search and displays the metadata and links that the site itself publishes — nothing more.
+
+**What this tool is not.** It has **no download functionality**: it does not fetch, host, store, or distribute any ROM
+files, and it does not bypass any access controls, paywalls, or copyright protection. Every URL it prints is an
+ordinary public link to a third-party website, identical to what you would see in a browser.
+
+**What you do with the links is your call.** You are free to open a link — that request goes from *you* directly to
+edgeemu.net, without this tool involved. Whether downloading a particular ROM is lawful depends on your jurisdiction,
+the site's terms, and whether you own the original media. That decision, and the responsibility for it, is entirely
+yours — the same as with any search engine result.
+
 This project is not affiliated with edgeemu.net or any console manufacturer.
