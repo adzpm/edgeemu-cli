@@ -67,7 +67,7 @@ func selectColumns(ids []string) ([]romColumn, error) {
 }
 
 // PrintROMs renders search results with the requested columns.
-func PrintROMs(roms []ds.ROM, columnIDs []string) error {
+func (p *Printer) PrintROMs(roms []ds.ROM, columnIDs []string) error {
 	cols, err := selectColumns(columnIDs)
 	if err != nil {
 		return err
@@ -90,15 +90,15 @@ func PrintROMs(roms []ds.ROM, columnIDs []string) error {
 		rows = append(rows, row)
 	}
 
-	return Render(headers, rows)
+	return p.Render(headers, rows)
 }
 
 // PrintSystems renders the systems list.
-func PrintSystems(systems []ds.System) error {
+func (p *Printer) PrintSystems(systems []ds.System) error {
 	rows := make([][]string, 0, len(systems))
 	for _, s := range systems {
 		rows = append(rows, []string{s.ID, s.Name})
 	}
 
-	return Render([]string{"ID", "Name"}, rows)
+	return p.Render([]string{"ID", "Name"}, rows)
 }

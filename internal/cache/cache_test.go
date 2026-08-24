@@ -19,14 +19,10 @@ import (
 	"github.com/adzpm/edgeemu-cli/internal/fixtures"
 )
 
-// sandboxCacheDir points the user cache directory into a temp dir on any OS.
-func sandboxCacheDir(t *testing.T) {
+func cachePath(t *testing.T) string {
 	t.Helper()
 
-	tmp := t.TempDir()
-	t.Setenv("HOME", tmp)                                        // darwin
-	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))     // linux
-	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData")) // windows
+	return filepath.Join(t.TempDir(), "systems.json")
 }
 
 func newTestClient(t *testing.T, hits *atomic.Int32) *client.Client {
@@ -42,45 +38,38 @@ func newTestClient(t *testing.T, hits *atomic.Int32) *client.Client {
 }
 
 func TestSystemsFetchesOnceThenServesFromCache(t *testing.T) {
-	sandboxCacheDir(t)
-
 	var hits atomic.Int32
-	edge := newTestClient(t, &hits)
+	c := New(WithClient(newTestClient(t, &hits)), WithPath(cachePath(t)))
 
-	first, err := Systems(context.Background(), edge, false)
+	first, err := c.Systems(context.Background(), false)
 	require.NoError(t, err)
 	require.Len(t, first, 3)
 	require.EqualValues(t, 1, hits.Load())
 
-	second, err := Systems(context.Background(), edge, false)
+	second, err := c.Systems(context.Background(), false)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, hits.Load(), "second call must be served from cache")
 	assert.Equal(t, first, second)
 }
 
 func TestSystemsRefreshBypassesCache(t *testing.T) {
-	sandboxCacheDir(t)
-
 	var hits atomic.Int32
-	edge := newTestClient(t, &hits)
+	c := New(WithClient(newTestClient(t, &hits)), WithPath(cachePath(t)))
 
-	_, err := Systems(context.Background(), edge, false)
+	_, err := c.Systems(context.Background(), false)
 	require.NoError(t, err)
 
-	_, err = Systems(context.Background(), edge, true)
+	_, err = c.Systems(context.Background(), true)
 	require.NoError(t, err)
 
 	assert.EqualValues(t, 2, hits.Load(), "refresh must hit the network")
 }
 
 func TestLoadExpiry(t *testing.T) {
-	sandboxCacheDir(t)
+	p := cachePath(t)
+	c := New(WithPath(p))
 
 	// Write a cache stamped older than the TTL directly.
-	p, err := path()
-	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
-
 	stale := systemsCache{
 		FetchedAt: time.Now().Add(-TTL - time.Hour),
 		Systems:   []ds.System{{ID: "atari-2600", Name: "Atari 2600"}},
@@ -89,32 +78,49 @@ func TestLoadExpiry(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(p, data, 0o644))
 
-	assert.Nil(t, Load(TTL), "expired cache must not be returned")
-	assert.Len(t, Load(0), 1, "zero maxAge accepts a cache of any age")
+	assert.Nil(t, c.Load(TTL), "expired cache must not be returned")
+	assert.Len(t, c.Load(0), 1, "zero maxAge accepts a cache of any age")
 }
 
 func TestLoadMissingAndCorrupt(t *testing.T) {
-	sandboxCacheDir(t)
+	p := cachePath(t)
+	c := New(WithPath(p))
 
-	assert.Nil(t, Load(0), "missing cache file must load as nil")
+	assert.Nil(t, c.Load(0), "missing cache file must load as nil")
 
-	p, err := path()
-	require.NoError(t, err)
-	require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
 	require.NoError(t, os.WriteFile(p, []byte("{not json"), 0o644))
+	assert.Nil(t, c.Load(0), "corrupt cache file must load as nil")
+}
 
-	assert.Nil(t, Load(0), "corrupt cache file must load as nil")
+func TestCustomTTL(t *testing.T) {
+	var hits atomic.Int32
+	c := New(WithClient(newTestClient(t, &hits)), WithPath(cachePath(t)), WithTTL(time.Nanosecond))
+
+	_, err := c.Systems(context.Background(), false)
+	require.NoError(t, err)
+
+	time.Sleep(time.Millisecond)
+
+	_, err = c.Systems(context.Background(), false)
+	require.NoError(t, err)
+
+	assert.EqualValues(t, 2, hits.Load(), "expired TTL must refetch")
 }
 
 func TestSystemsFetchErrorIsReturned(t *testing.T) {
-	sandboxCacheDir(t)
-
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "down", http.StatusServiceUnavailable)
 	}))
 	t.Cleanup(srv.Close)
 
-	edge := client.New(client.WithBaseURL(srv.URL))
-	_, err := Systems(context.Background(), edge, false)
+	c := New(WithClient(client.New(client.WithBaseURL(srv.URL))), WithPath(cachePath(t)))
+	_, err := c.Systems(context.Background(), false)
 	require.Error(t, err, "fetch failure with no cache must surface")
+}
+
+func TestSystemsWithoutClientErrors(t *testing.T) {
+	c := New(WithPath(cachePath(t)))
+
+	_, err := c.Systems(context.Background(), false)
+	require.Error(t, err, "cache miss without a client must error, not panic")
 }

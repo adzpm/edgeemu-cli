@@ -17,7 +17,7 @@ func runInstall(t *testing.T, args ...string) error {
 
 	root := &cli.Command{
 		Name:     "edgeemu",
-		Commands: []*cli.Command{{Name: "install-completion", Action: Install}},
+		Commands: []*cli.Command{{Name: "install-completion", Action: New().Install}},
 	}
 
 	return root.Run(context.Background(), append([]string{"edgeemu", "install-completion"}, args...))

@@ -1,7 +1,7 @@
 package table
 
 import (
-	"os"
+	"bytes"
 	"strings"
 	"testing"
 
@@ -81,50 +81,15 @@ func TestSelectColumnsUnknown(t *testing.T) {
 	assert.Contains(t, err.Error(), "bogus", "error must name the bad column")
 }
 
-// captureStdout runs fn while redirecting os.Stdout into a pipe and
-// returns everything written. Render targets os.Stdout directly, and a
-// pipe also disables terminal-width squeezing, keeping output stable.
-func captureStdout(t *testing.T, fn func() error) string {
-	t.Helper()
-
-	orig := os.Stdout
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = w
-
-	done := make(chan string)
-	go func() {
-		buf := make([]byte, 0, 4096)
-		tmp := make([]byte, 4096)
-		for {
-			n, err := r.Read(tmp)
-			buf = append(buf, tmp[:n]...)
-			if err != nil {
-				break
-			}
-		}
-		done <- string(buf)
-	}()
-
-	fnErr := fn()
-
-	w.Close()
-	os.Stdout = orig
-	out := <-done
-
-	require.NoError(t, fnErr)
-	return out
-}
-
 func TestPrintROMs(t *testing.T) {
 	roms := []ds.ROM{
 		{Name: "Sonic & Knuckles (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/1.zip", Size: "1.36m", Downloads: 341, Hash: "4DCFD55C"},
 		{Name: "Sonic The Hedgehog 2 (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/2.zip", Size: "732.08k", Downloads: 432, Hash: "24AB4C3A"},
 	}
 
-	out := captureStdout(t, func() error {
-		return PrintROMs(roms, []string{"name", "dls"})
-	})
+	var buf bytes.Buffer
+	require.NoError(t, New(WithWriter(&buf)).PrintROMs(roms, []string{"name", "dls"}))
+	out := buf.String()
 
 	for _, want := range []string{"Name", "DLs", "Sonic & Knuckles (World)", "341", "432"} {
 		assert.Contains(t, out, want)
@@ -135,7 +100,8 @@ func TestPrintROMs(t *testing.T) {
 }
 
 func TestPrintROMsUnknownColumn(t *testing.T) {
-	err := PrintROMs([]ds.ROM{{Name: "x"}}, []string{"nope"})
+	var buf bytes.Buffer
+	err := New(WithWriter(&buf)).PrintROMs([]ds.ROM{{Name: "x"}}, []string{"nope"})
 	require.Error(t, err)
 }
 
@@ -145,9 +111,9 @@ func TestPrintSystems(t *testing.T) {
 		{ID: "sega-genesis", Name: "Sega Mega Drive / Genesis"},
 	}
 
-	out := captureStdout(t, func() error {
-		return PrintSystems(systems)
-	})
+	var buf bytes.Buffer
+	require.NoError(t, New(WithWriter(&buf)).PrintSystems(systems))
+	out := buf.String()
 
 	for _, want := range []string{"ID", "atari-2600", "Sega Mega Drive / Genesis"} {
 		assert.Contains(t, out, want)

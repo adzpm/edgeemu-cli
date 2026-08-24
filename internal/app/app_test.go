@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ func runCLI(t *testing.T, page string, args ...string) (string, error) {
 	}))
 	t.Cleanup(srv.Close)
 
-	root := newRootCmd(client.New(client.WithBaseURL(srv.URL)))
+	root := New(WithClient(client.New(client.WithBaseURL(srv.URL)))).Root()
 
 	var buf bytes.Buffer
 	root.Writer = &buf

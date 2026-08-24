@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,15 +12,57 @@ import (
 	"github.com/adzpm/edgeemu-cli/internal/ds"
 )
 
-// TTL is how long a cached systems list is considered fresh.
+// TTL is how long a cached systems list is considered fresh by default.
 const TTL = 24 * time.Hour
+
+// Cache stores the systems list on disk between runs.
+type Cache struct {
+	edge *client.Client
+	ttl  time.Duration
+	path string
+}
+
+// Option customizes a Cache.
+type Option func(*Cache)
+
+// WithClient sets the client used to fetch systems on a cache miss.
+func WithClient(edge *client.Client) Option {
+	return func(c *Cache) { c.edge = edge }
+}
+
+// WithTTL overrides how long a cached list is considered fresh.
+func WithTTL(ttl time.Duration) Option {
+	return func(c *Cache) { c.ttl = ttl }
+}
+
+// WithPath overrides the cache file location.
+func WithPath(path string) Option {
+	return func(c *Cache) { c.path = path }
+}
+
+// New creates a Cache with sane defaults, applying the given options.
+// Without WithPath the cache lives in the user cache directory; without
+// WithClient a cache miss returns an error instead of fetching.
+func New(opts ...Option) *Cache {
+	c := &Cache{ttl: TTL}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
 
 type systemsCache struct {
 	FetchedAt time.Time   `json:"fetched_at"`
 	Systems   []ds.System `json:"systems"`
 }
 
-func path() (string, error) {
+func (c *Cache) filePath() (string, error) {
+	if c.path != "" {
+		return c.path, nil
+	}
+
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
@@ -30,8 +73,8 @@ func path() (string, error) {
 
 // Load returns the cached systems list, or nil if there is no usable
 // cache. A maxAge of 0 accepts a cache of any age.
-func Load(maxAge time.Duration) []ds.System {
-	p, err := path()
+func (c *Cache) Load(maxAge time.Duration) []ds.System {
+	p, err := c.filePath()
 	if err != nil {
 		return nil
 	}
@@ -41,20 +84,20 @@ func Load(maxAge time.Duration) []ds.System {
 		return nil
 	}
 
-	var c systemsCache
-	if json.Unmarshal(data, &c) != nil {
+	var sc systemsCache
+	if json.Unmarshal(data, &sc) != nil {
 		return nil
 	}
 
-	if maxAge > 0 && time.Since(c.FetchedAt) > maxAge {
+	if maxAge > 0 && time.Since(sc.FetchedAt) > maxAge {
 		return nil
 	}
 
-	return c.Systems
+	return sc.Systems
 }
 
-func store(systems []ds.System) {
-	p, err := path()
+func (c *Cache) store(systems []ds.System) {
+	p, err := c.filePath()
 	if err != nil {
 		return
 	}
@@ -93,19 +136,23 @@ func store(systems []ds.System) {
 
 // Systems returns the systems list, preferring a fresh cache over the
 // network. With refresh, the cache is bypassed and rewritten.
-func Systems(ctx context.Context, edge *client.Client, refresh bool) ([]ds.System, error) {
+func (c *Cache) Systems(ctx context.Context, refresh bool) ([]ds.System, error) {
 	if !refresh {
-		if systems := Load(TTL); systems != nil {
+		if systems := c.Load(c.ttl); systems != nil {
 			return systems, nil
 		}
 	}
 
-	systems, err := edge.Systems(ctx)
+	if c.edge == nil {
+		return nil, errors.New("cache: no client configured to fetch systems")
+	}
+
+	systems, err := c.edge.Systems(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	store(systems)
+	c.store(systems)
 
 	return systems, nil
 }
