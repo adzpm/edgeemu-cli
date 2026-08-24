@@ -47,7 +47,7 @@ edgeemu search sonic                          # search all systems
 edgeemu search sonic -s sega-genesis          # search a specific system
 edgeemu search sonic -l 10                    # limit results
 edgeemu search sonic -c name,size,dls,url     # pick fields to show
-edgeemu search sonic -f json                  # machine-readable output (json, yaml or xml)
+edgeemu search sonic -f json                  # machine-readable output (json, yaml, xml or csv)
 ```
 
 The default `list` format never truncates anything, and download URLs sit alone on their own line so the terminal always
@@ -64,8 +64,8 @@ keeps them clickable:
 ```
 
 Every field is shown by default. Use `-c` to narrow the output to specific fields: `name`, `system`, `size`, `unpacked`,
-`dls`, `hash`, `url`. The selection applies to every output format — in `json`, `yaml` and `xml` the field IDs are used
-as keys, and only the selected fields are encoded.
+`dls`, `hash`, `url`. The selection applies to every output format — in `json`, `yaml`, `xml` and `csv` the field IDs
+are used as keys (or the header row), and only the selected fields are encoded.
 
 > Note: the site returns at most 100 results per query. If you hit exactly 100,
 > narrow the query or search within a specific system via `-s`.
@@ -74,7 +74,7 @@ as keys, and only the selected fields are encoded.
 
 ```sh
 edgeemu systems            # list all system IDs for the -s flag
-edgeemu systems -f json    # machine-readable output (json, yaml or xml)
+edgeemu systems -f json    # machine-readable output (json, yaml, xml or csv)
 edgeemu systems -r         # refresh the cached list
 ```
 
@@ -118,5 +118,5 @@ task --list       # everything else
 | `-s, --system`  | search          | System to search in (default: all)     |
 | `-l, --limit`   | search          | Max results to show                    |
 | `-c, --columns` | search          | Comma-separated fields to show         |
-| `-f, --format`  | search, systems | Output format: list, json, yaml or xml |
+| `-f, --format`  | search, systems | Output format: list, json, yaml, xml or csv |
 | `-r, --refresh` | systems         | Bypass the cache and refetch           |

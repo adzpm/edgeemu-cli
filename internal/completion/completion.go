@@ -92,7 +92,7 @@ func (c *Completion) Search(ctx context.Context, cmd *cli.Command) {
 			fmt.Fprintln(cmd.Root().Writer, id)
 		}
 	case "-f", "--format":
-		for _, f := range []string{"list", "json", "yaml", "xml"} {
+		for _, f := range []string{"list", "json", "yaml", "xml", "csv"} {
 			fmt.Fprintln(cmd.Root().Writer, f)
 		}
 	default:

@@ -23,7 +23,7 @@ var (
 		Name:    "format",
 		Aliases: []string{"f"},
 		Value:   "list",
-		Usage:   "output format: list, json, yaml or xml",
+		Usage:   "output format: list, json, yaml, xml or csv",
 	}
 
 	limitFlag = &cli.IntFlag{

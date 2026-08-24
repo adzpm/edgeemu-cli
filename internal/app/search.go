@@ -38,6 +38,8 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 		return a.printer.YAMLROMs(roms, columns)
 	case "xml":
 		return a.printer.XMLROMs(roms, columns)
+	case "csv":
+		return a.printer.CSVROMs(roms, columns)
 	case "list":
 		if len(roms) == 0 {
 			fmt.Fprintln(a.printer.Writer(), "nothing found")
@@ -46,6 +48,6 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 
 		return a.printer.PrintROMs(roms, columns)
 	default:
-		return fmt.Errorf("unknown format %q (available: list, json, yaml, xml)", format)
+		return fmt.Errorf("unknown format %q (available: list, json, yaml, xml, csv)", format)
 	}
 }

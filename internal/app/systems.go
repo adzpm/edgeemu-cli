@@ -21,9 +21,11 @@ func (a *App) Systems(ctx context.Context, cmd *cli.Command) error {
 		return a.printer.YAML(systems)
 	case "xml":
 		return a.printer.XMLSystems(systems)
+	case "csv":
+		return a.printer.CSVSystems(systems)
 	case "list":
 		return a.printer.PrintSystems(systems)
 	default:
-		return fmt.Errorf("unknown format %q (available: list, json, yaml, xml)", format)
+		return fmt.Errorf("unknown format %q (available: list, json, yaml, xml, csv)", format)
 	}
 }

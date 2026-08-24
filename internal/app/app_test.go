@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
 	"net/http"
@@ -166,6 +167,45 @@ func TestSystemsXML(t *testing.T) {
 	assert.Len(t, doc.Systems, 3)
 }
 
+func TestSearchCSV(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "csv")
+	require.NoError(t, err)
+
+	rows, err := csv.NewReader(strings.NewReader(out)).ReadAll()
+	require.NoError(t, err, "output is not valid CSV:\n%s", out)
+
+	require.Len(t, rows, 3, "header plus two ROMs")
+	assert.Equal(t, []string{"name", "system", "size", "unpacked", "dls", "hash", "url"}, rows[0])
+	assert.Equal(t, "Sonic & Knuckles (World)", rows[1][0])
+	assert.Equal(t, "341", rows[1][4])
+}
+
+func TestSearchCSVHonorsColumns(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "csv", "-c", "name,dls")
+	require.NoError(t, err)
+
+	rows, err := csv.NewReader(strings.NewReader(out)).ReadAll()
+	require.NoError(t, err)
+
+	require.Len(t, rows, 3)
+	assert.Equal(t, []string{"name", "dls"}, rows[0])
+	assert.Equal(t, []string{"Sonic & Knuckles (World)", "341"}, rows[1])
+}
+
+func TestSystemsCSV(t *testing.T) {
+	sandboxCacheDir(t)
+
+	out, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "csv")
+	require.NoError(t, err)
+
+	rows, err := csv.NewReader(strings.NewReader(out)).ReadAll()
+	require.NoError(t, err)
+
+	require.Len(t, rows, 4, "header plus three systems")
+	assert.Equal(t, []string{"id", "name"}, rows[0])
+	assert.Equal(t, []string{"atari-2600", "Atari 2600"}, rows[1])
+}
+
 func TestSearchJSONEmptyIsArray(t *testing.T) {
 	out, err := runCLI(t, fixtures.EmptyPage, "search", "nothing-here", "-f", "json")
 	require.NoError(t, err)
@@ -174,9 +214,9 @@ func TestSearchJSONEmptyIsArray(t *testing.T) {
 }
 
 func TestSearchUnknownFormatFails(t *testing.T) {
-	_, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "csv")
+	_, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "tsv")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "csv")
+	assert.Contains(t, err.Error(), "tsv")
 }
 
 func TestSearchLimit(t *testing.T) {
@@ -244,6 +284,6 @@ func TestSystemsYAML(t *testing.T) {
 func TestSystemsUnknownFormatFails(t *testing.T) {
 	sandboxCacheDir(t)
 
-	_, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "csv")
+	_, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "tsv")
 	require.Error(t, err)
 }
