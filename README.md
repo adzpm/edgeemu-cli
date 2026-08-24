@@ -96,7 +96,9 @@ cache), field IDs after `-c` and formats after `-f`. To print the raw completion
 
 ## Development
 
-Common tasks are defined in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint goreleaser`):
+Common tasks are defined in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint goreleaser`). CI
+runs with pinned tool versions — task 3.53.1, golangci-lint 2.13.1, goreleaser 2.18.0 (see the workflow `env`
+blocks); keep local tools reasonably close to those.
 
 ```sh
 task build        # build with the version stamped from git
