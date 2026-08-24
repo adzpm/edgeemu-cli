@@ -114,7 +114,9 @@ func (a *App) Root() *cli.Command {
 		Description: "An information tool: queries the public search on edgeemu.net and displays\n" +
 			"the metadata and links the site itself publishes. It has no download\n" +
 			"functionality and does not host, distribute, or provide any means of\n" +
-			"obtaining ROM files in circumvention of copyright.",
+			"obtaining ROM files in circumvention of copyright. The links it prints\n" +
+			"lead to a third-party website; whether to follow them is your own\n" +
+			"decision and responsibility, as with any search engine result.",
 		EnableShellCompletion: true,
 		Commands: []*cli.Command{
 			{
