@@ -8,7 +8,7 @@ import (
 	"github.com/adzpm/edgeemu-cli/internal/cache"
 	"github.com/adzpm/edgeemu-cli/internal/client"
 	"github.com/adzpm/edgeemu-cli/internal/completion"
-	"github.com/adzpm/edgeemu-cli/internal/table"
+	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
 var (
@@ -19,9 +19,11 @@ var (
 		Usage:   "system to search in (see 'edgeemu systems')",
 	}
 
-	jsonFlag = &cli.BoolFlag{
-		Name:  "json",
-		Usage: "output results as JSON",
+	formatFlag = &cli.StringFlag{
+		Name:    "format",
+		Aliases: []string{"f"},
+		Value:   "list",
+		Usage:   "output format: list, json, yaml or xml",
 	}
 
 	limitFlag = &cli.IntFlag{
@@ -33,7 +35,7 @@ var (
 	columnsFlag = &cli.StringSliceFlag{
 		Name:    "columns",
 		Aliases: []string{"c"},
-		Usage:   "columns to show, comma-separated (" + strings.Join(table.ColumnIDs(), ", ") + ")",
+		Usage:   "columns to show, comma-separated (" + strings.Join(render.ColumnIDs(), ", ") + ")",
 	}
 
 	refreshFlag = &cli.BoolFlag{
@@ -45,10 +47,10 @@ var (
 
 // App wires the edgeemu.net client into the CLI command actions.
 type App struct {
-	edge  *client.Client
-	cache *cache.Cache
-	table *table.Printer
-	comp  *completion.Completion
+	edge    *client.Client
+	cache   *cache.Cache
+	printer *render.Printer
+	comp    *completion.Completion
 }
 
 // Option customizes an App.
@@ -64,9 +66,9 @@ func WithCache(c *cache.Cache) Option {
 	return func(a *App) { a.cache = c }
 }
 
-// WithTable overrides the table printer.
-func WithTable(p *table.Printer) Option {
-	return func(a *App) { a.table = p }
+// WithPrinter overrides the output printer.
+func WithPrinter(p *render.Printer) Option {
+	return func(a *App) { a.printer = p }
 }
 
 // WithCompletion overrides the shell completion provider.
@@ -89,8 +91,8 @@ func New(opts ...Option) *App {
 	if a.cache == nil {
 		a.cache = cache.New(cache.WithClient(a.edge))
 	}
-	if a.table == nil {
-		a.table = table.New()
+	if a.printer == nil {
+		a.printer = render.New()
 	}
 	if a.comp == nil {
 		a.comp = completion.New(completion.WithCache(a.cache))
@@ -113,7 +115,7 @@ func (a *App) Root() *cli.Command {
 				ArgsUsage: "<query>",
 				Flags: []cli.Flag{
 					systemFlag,
-					jsonFlag,
+					formatFlag,
 					limitFlag,
 					columnsFlag,
 				},
@@ -123,7 +125,7 @@ func (a *App) Root() *cli.Command {
 			{
 				Name:   "systems",
 				Usage:  "list available systems",
-				Flags:  []cli.Flag{refreshFlag},
+				Flags:  []cli.Flag{formatFlag, refreshFlag},
 				Action: a.Systems,
 			},
 			{

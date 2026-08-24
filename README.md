@@ -46,23 +46,25 @@ to every [release](https://github.com/adzpm/edgeemu-cli/releases).
 edgeemu search sonic                          # search all systems
 edgeemu search sonic -s sega-genesis          # search a specific system
 edgeemu search sonic -l 10                    # limit results
-edgeemu search sonic -c name,size,dls,url     # pick columns
-edgeemu search sonic --json                   # JSON output (all fields)
+edgeemu search sonic -c name,size,dls,url     # pick fields to show
+edgeemu search sonic -f json                  # machine-readable output (json, yaml or xml)
 ```
 
+The default `list` format never truncates anything, and download URLs sit
+alone on their own line so the terminal always keeps them clickable:
+
 ```
-┌───┬──────────────────────────────────┬───────────────────────────┬─────────────────────────────────────────────┐
-│ # │               Name               │          System           │                     URL                     │
-├───┼──────────────────────────────────┼───────────────────────────┼─────────────────────────────────────────────┤
-│ 1 │ Sonic The Hedgehog (USA, Europe) │ Sega Mega Drive / Genesis │ https://edgeemu.net/download/sega-genesis/… │
-│ 2 │ Sonic The Hedgehog 2 (World)     │ Sega Mega Drive / Genesis │ https://edgeemu.net/download/sega-genesis/… │
-└───┴──────────────────────────────────┴───────────────────────────┴─────────────────────────────────────────────┘
+1. Sonic The Hedgehog (USA, Europe)
+   system: Sega Mega Drive / Genesis · size: 377.87k · unpacked: 512.00k · dls: 588 · hash: F9394E97
+   https://edgeemu.net/download/sega-genesis/Sonic%20The%20Hedgehog%20%28USA%2C%20Europe%29.zip
+
+2. Sonic The Hedgehog 2 (World)
+   system: Sega Mega Drive / Genesis · size: 732.08k · unpacked: 1.00m · dls: 432 · hash: 24AB4C3A
+   https://edgeemu.net/download/sega-genesis/Sonic%20The%20Hedgehog%202%20%28World%29.zip
 ```
 
-Available columns: `name`, `system`, `size`, `unpacked`, `dls`, `hash`, `url`.
-
-By default the table shows `name` and `url`; the `system` column is added only when searching across all systems (no
-`-s` flag). Use `-c` to pick any set.
+Every field is shown by default. Use `-c` to narrow the output to specific
+fields: `name`, `system`, `size`, `unpacked`, `dls`, `hash`, `url`.
 
 > Note: the site returns at most 100 results per query. If you hit exactly 100,
 > narrow the query or search within a specific system via `-s`.
@@ -70,8 +72,9 @@ By default the table shows `name` and `url`; the `system` column is added only w
 ### Systems
 
 ```sh
-edgeemu systems       # list all system IDs for the -s flag
-edgeemu systems -r    # refresh the cached list
+edgeemu systems            # list all system IDs for the -s flag
+edgeemu systems -f json    # machine-readable output (json, yaml or xml)
+edgeemu systems -r         # refresh the cached list
 ```
 
 The list is cached for 24 hours in the user cache directory (`~/Library/Caches/edgeemu` on macOS, `~/.cache/edgeemu` on
@@ -113,6 +116,6 @@ task --list       # everything else
 |-----------------|----------|------------------------------------|
 | `-s, --system`  | search   | System to search in (default: all) |
 | `-l, --limit`   | search   | Max results to show                |
-| `-c, --columns` | search   | Comma-separated columns to show    |
-| `--json`        | search   | Output results as JSON             |
+| `-c, --columns` | search   | Comma-separated fields to show     |
+| `-f, --format`  | search, systems | Output format: list, json, yaml or xml |
 | `-r, --refresh` | systems  | Bypass the cache and refetch       |

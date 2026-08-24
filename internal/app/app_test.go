@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -12,14 +13,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 
 	"github.com/adzpm/edgeemu-cli/internal/client"
 	"github.com/adzpm/edgeemu-cli/internal/ds"
 	"github.com/adzpm/edgeemu-cli/internal/fixtures"
+	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
 // runCLI executes the root command against a stub server and returns
-// what the command wrote to its writer.
+// everything the command printed.
 func runCLI(t *testing.T, page string, args ...string) (string, error) {
 	t.Helper()
 
@@ -28,9 +31,11 @@ func runCLI(t *testing.T, page string, args ...string) (string, error) {
 	}))
 	t.Cleanup(srv.Close)
 
-	root := New(WithClient(client.New(client.WithBaseURL(srv.URL)))).Root()
-
 	var buf bytes.Buffer
+	root := New(
+		WithClient(client.New(client.WithBaseURL(srv.URL))),
+		WithPrinter(render.New(render.WithWriter(&buf))),
+	).Root()
 	root.Writer = &buf
 
 	err := root.Run(context.Background(), append([]string{"edgeemu"}, args...))
@@ -38,8 +43,42 @@ func runCLI(t *testing.T, page string, args ...string) (string, error) {
 	return buf.String(), err
 }
 
+func sandboxCacheDir(t *testing.T) {
+	t.Helper()
+
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))
+	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData"))
+}
+
+func TestSearchDefaultsToListWithAllFields(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-s", "sega-genesis")
+	require.NoError(t, err)
+
+	assert.Contains(t, out, "1. Sonic & Knuckles (World)")
+	assert.Contains(t, out, "2. Sonic The Hedgehog (USA, Europe)")
+	// The full URL must be present, untruncated, on its own line.
+	assert.Contains(t, out, "/download/sega-genesis/Sonic%20%26%20Knuckles%20%28World%29.zip")
+	// Every field is shown by default, explicitly.
+	assert.Contains(t, out, "system: Sega Mega Drive / Genesis")
+	assert.Contains(t, out, "size: 1.36m")
+	assert.Contains(t, out, "unpacked: 256.00k")
+	assert.Contains(t, out, "dls: 341")
+	assert.Contains(t, out, "hash: 4DCFD55C 0658F691")
+}
+
+func TestSearchColumnsNarrowTheList(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-c", "name,url")
+	require.NoError(t, err)
+
+	assert.Contains(t, out, "1. Sonic & Knuckles (World)")
+	assert.NotContains(t, out, "system:")
+	assert.NotContains(t, out, "size:")
+}
+
 func TestSearchJSON(t *testing.T) {
-	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "--json")
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "json")
 	require.NoError(t, err)
 
 	var roms []ds.ROM
@@ -50,15 +89,60 @@ func TestSearchJSON(t *testing.T) {
 	assert.Equal(t, 341, roms[0].Downloads)
 }
 
+func TestSearchYAML(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "--format", "yaml")
+	require.NoError(t, err)
+
+	var roms []ds.ROM
+	require.NoError(t, yaml.Unmarshal([]byte(out), &roms), "output is not valid YAML:\n%s", out)
+
+	require.Len(t, roms, 2)
+	assert.Equal(t, "Sonic & Knuckles (World)", roms[0].Name)
+	assert.Equal(t, "256.00k", roms[0].UnpackedSize)
+}
+
+func TestSearchXML(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "xml")
+	require.NoError(t, err)
+
+	var doc struct {
+		ROMs []ds.ROM `xml:"rom"`
+	}
+	require.NoError(t, xml.Unmarshal([]byte(out), &doc), "output is not valid XML:\n%s", out)
+
+	require.Len(t, doc.ROMs, 2)
+	assert.Equal(t, "Sonic & Knuckles (World)", doc.ROMs[0].Name)
+	assert.True(t, strings.HasPrefix(out, xml.Header), "XML output must start with the declaration")
+}
+
+func TestSystemsXML(t *testing.T) {
+	sandboxCacheDir(t)
+
+	out, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "xml")
+	require.NoError(t, err)
+
+	var doc struct {
+		Systems []ds.System `xml:"system"`
+	}
+	require.NoError(t, xml.Unmarshal([]byte(out), &doc))
+	assert.Len(t, doc.Systems, 3)
+}
+
 func TestSearchJSONEmptyIsArray(t *testing.T) {
-	out, err := runCLI(t, fixtures.EmptyPage, "search", "nothing-here", "--json")
+	out, err := runCLI(t, fixtures.EmptyPage, "search", "nothing-here", "-f", "json")
 	require.NoError(t, err)
 
 	assert.Equal(t, "[]", strings.TrimSpace(out), "empty result must encode as [], not null")
 }
 
+func TestSearchUnknownFormatFails(t *testing.T) {
+	_, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "csv")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "csv")
+}
+
 func TestSearchLimit(t *testing.T) {
-	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "--json", "-l", "1")
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "json", "-l", "1")
 	require.NoError(t, err)
 
 	var roms []ds.ROM
@@ -87,11 +171,41 @@ func TestSearchUnknownColumnFails(t *testing.T) {
 }
 
 func TestSystemsCommand(t *testing.T) {
-	tmp := t.TempDir()
-	t.Setenv("HOME", tmp)
-	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))
-	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData"))
+	sandboxCacheDir(t)
 
-	_, err := runCLI(t, fixtures.SystemsPage, "systems")
+	out, err := runCLI(t, fixtures.SystemsPage, "systems")
 	require.NoError(t, err)
+
+	assert.Contains(t, out, "atari-2600")
+	assert.Contains(t, out, "Sega Mega Drive / Genesis")
+}
+
+func TestSystemsJSON(t *testing.T) {
+	sandboxCacheDir(t)
+
+	out, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "json")
+	require.NoError(t, err)
+
+	var systems []ds.System
+	require.NoError(t, json.Unmarshal([]byte(out), &systems))
+	assert.Len(t, systems, 3)
+}
+
+func TestSystemsYAML(t *testing.T) {
+	sandboxCacheDir(t)
+
+	out, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "yaml")
+	require.NoError(t, err)
+
+	var systems []ds.System
+	require.NoError(t, yaml.Unmarshal([]byte(out), &systems))
+	assert.Len(t, systems, 3)
+	assert.Equal(t, "atari-2600", systems[0].ID)
+}
+
+func TestSystemsUnknownFormatFails(t *testing.T) {
+	sandboxCacheDir(t)
+
+	_, err := runCLI(t, fixtures.SystemsPage, "systems", "-f", "csv")
+	require.Error(t, err)
 }

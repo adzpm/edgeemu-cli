@@ -17,7 +17,7 @@ import (
 	"github.com/adzpm/edgeemu-cli/internal/cache"
 	"github.com/adzpm/edgeemu-cli/internal/client"
 	"github.com/adzpm/edgeemu-cli/internal/fixtures"
-	"github.com/adzpm/edgeemu-cli/internal/table"
+	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
 func cachePath(t *testing.T) string {
@@ -87,7 +87,7 @@ func TestSearchCompletesColumns(t *testing.T) {
 	// The columns list is static: no cache or network is involved.
 	out := runSearchComplete(t, New(), "-c")
 
-	for _, want := range table.ColumnIDs() {
+	for _, want := range render.ColumnIDs() {
 		assert.Contains(t, out, want)
 	}
 }
@@ -96,4 +96,44 @@ func TestSearchSystemsWithoutCacheIsSilent(t *testing.T) {
 	out := runSearchComplete(t, New(), "-s")
 
 	assert.Empty(t, out, "no cache configured must print nothing, not panic")
+}
+
+// runSearchCompleteArgs is runSearchComplete with full control over the
+// words preceding --generate-shell-completion.
+func runSearchCompleteArgs(t *testing.T, comp *Completion, words ...string) string {
+	t.Helper()
+
+	origArgs := os.Args
+	os.Args = append(append([]string{"edgeemu", "search"}, words...), "--generate-shell-completion")
+	defer func() { os.Args = origArgs }()
+
+	var buf bytes.Buffer
+	cmd := &cli.Command{
+		Name:   "edgeemu",
+		Writer: &buf,
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "system", Aliases: []string{"s"}, Usage: "system to search in"},
+			&cli.StringSliceFlag{Name: "columns", Aliases: []string{"c"}, Usage: "columns to show"},
+		},
+	}
+
+	comp.Search(context.Background(), cmd)
+
+	return buf.String()
+}
+
+func TestSearchSuggestsFlagsAfterPositionalArg(t *testing.T) {
+	// Regression: "edgeemu search sonic --<TAB>" must offer flags, not
+	// subcommands (the default cli helper breaks on the positional arg).
+	for _, words := range [][]string{
+		{"sonic", "--"},
+		{"sonic", "-"},
+		{"sonic"},
+		{"--"},
+	} {
+		out := runSearchCompleteArgs(t, New(), words...)
+
+		assert.Contains(t, out, "--system:", "words=%v", words)
+		assert.Contains(t, out, "--columns:", "words=%v", words)
+	}
 }

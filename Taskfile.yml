@@ -1,8 +1,13 @@
 version: "3"
 
 vars:
-  BIN: edgeemu
-  MAIN: ./cmd/edgeemu
+  BIN_NAME: edgeemu
+  BIN: "{{.ROOT_DIR}}/{{.BIN_NAME}}"
+  MAIN: "{{.ROOT_DIR}}/cmd/edgeemu"
+  GOLANGCI_CONFIG: "{{.ROOT_DIR}}/.golangci.yml"
+  GORELEASER_CONFIG: "{{.ROOT_DIR}}/.goreleaser.yaml"
+  COVERAGE_FILE: "{{.ROOT_DIR}}/coverage.out"
+  DIST_DIR: "{{.ROOT_DIR}}/dist"
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo dev
   LDFLAGS: -s -w -X main.version={{.VERSION}}
@@ -29,42 +34,42 @@ tasks:
   test:
     desc: Run all tests
     cmds:
-      - go test -timeout 120s ./...
+      - go test -timeout 120s {{.ROOT_DIR}}/...
 
   cover:
     desc: Run tests with a coverage summary
     cmds:
-      - go test -timeout 120s -coverprofile=coverage.out ./...
-      - go tool cover -func=coverage.out | tail -1
+      - go test -timeout 120s -coverprofile={{.COVERAGE_FILE}} {{.ROOT_DIR}}/...
+      - go tool cover -func={{.COVERAGE_FILE}} | tail -1
 
   lint:
     desc: Run golangci-lint
     cmds:
-      - golangci-lint run
+      - golangci-lint run --config {{.GOLANGCI_CONFIG}} {{.ROOT_DIR}}/...
 
   vet:
     desc: Run go vet
     cmds:
-      - go vet ./...
+      - go vet {{.ROOT_DIR}}/...
 
   fmt:
     desc: Format all Go files
     cmds:
-      - gofmt -w .
+      - gofmt -w {{.ROOT_DIR}}
 
   fmt:check:
     desc: Fail if any file is not gofmt-formatted
     cmds:
-      - test -z "$(gofmt -l .)"
+      - test -z "$(gofmt -l {{.ROOT_DIR}})"
 
   tidy:
     desc: Tidy go.mod / go.sum
+    dir: "{{.ROOT_DIR}}"
     cmds:
       - go mod tidy
 
   check:
     desc: "Full local gate: format, vet, lint, tests"
-    deps: []
     cmds:
       - task: fmt:check
       - task: vet
@@ -74,14 +79,14 @@ tasks:
   snapshot:
     desc: Build a local goreleaser snapshot (no publishing)
     cmds:
-      - HOMEBREW_TAP_TOKEN=${HOMEBREW_TAP_TOKEN:-snapshot} goreleaser release --snapshot --clean --skip=publish
+      - HOMEBREW_TAP_TOKEN=${HOMEBREW_TAP_TOKEN:-snapshot} goreleaser release --config {{.GORELEASER_CONFIG}} --snapshot --clean --skip=publish
 
   release:check:
     desc: Validate the goreleaser config
     cmds:
-      - goreleaser check
+      - goreleaser check --config {{.GORELEASER_CONFIG}}
 
   clean:
     desc: Remove build artifacts
     cmds:
-      - rm -rf dist {{.BIN}} coverage.out
+      - rm -rf {{.DIST_DIR}} {{.BIN}} {{.COVERAGE_FILE}}

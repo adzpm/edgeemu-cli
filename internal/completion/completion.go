@@ -11,7 +11,7 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"github.com/adzpm/edgeemu-cli/internal/cache"
-	"github.com/adzpm/edgeemu-cli/internal/table"
+	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
 // fetchTimeout caps the network fetch during shell completion so a slow
@@ -49,8 +49,13 @@ func New(opts ...Option) *Completion {
 }
 
 // Search completes values for the search command: system IDs after
-// -s/--system (served from cache for instant results) and column IDs
-// after -c/--columns, falling back to the default flag completion.
+// -s/--system (served from cache for instant results), column IDs after
+// -c/--columns, and flag names otherwise.
+//
+// Flag suggestions are printed by hand instead of via
+// cli.DefaultCompleteWithFlags: the default helper mis-detects the word
+// being completed once a positional argument precedes the flag
+// ("edgeemu search sonic --<TAB>") and suggests subcommands instead.
 func (c *Completion) Search(ctx context.Context, cmd *cli.Command) {
 	args := os.Args
 	if len(args) > 0 && args[len(args)-1] == "--generate-shell-completion" {
@@ -83,11 +88,35 @@ func (c *Completion) Search(ctx context.Context, cmd *cli.Command) {
 			fmt.Fprintln(cmd.Root().Writer, s.ID)
 		}
 	case "-c", "--columns":
-		for _, id := range table.ColumnIDs() {
+		for _, id := range render.ColumnIDs() {
 			fmt.Fprintln(cmd.Root().Writer, id)
 		}
+	case "-f", "--format":
+		for _, f := range []string{"list", "json", "yaml", "xml"} {
+			fmt.Fprintln(cmd.Root().Writer, f)
+		}
 	default:
-		cli.DefaultCompleteWithFlags(ctx, cmd)
+		flagSuggestions(cmd)
+	}
+}
+
+// flagSuggestions prints every visible flag of cmd as "--name:usage";
+// the shell filters them by the prefix the user has typed.
+func flagSuggestions(cmd *cli.Command) {
+	for _, f := range cmd.VisibleFlags() {
+		name := strings.TrimSpace(f.Names()[0])
+
+		prefix := "--"
+		if len(name) == 1 {
+			prefix = "-"
+		}
+
+		usage := ""
+		if df, ok := f.(cli.DocGenerationFlag); ok {
+			usage = df.GetUsage()
+		}
+
+		fmt.Fprintf(cmd.Root().Writer, "%s%s:%s\n", prefix, name, usage)
 	}
 }
 
