@@ -104,8 +104,12 @@ func New(opts ...Option) *App {
 // Root builds the root CLI command tree.
 func (a *App) Root() *cli.Command {
 	return &cli.Command{
-		Name:                  "edgeemu",
-		Usage:                 "search ROMs on edgeemu.net",
+		Name:  "edgeemu",
+		Usage: "search ROMs on edgeemu.net",
+		Description: "An information tool: queries the public search on edgeemu.net and displays\n" +
+			"the metadata and links the site itself publishes. It has no download\n" +
+			"functionality and does not host, distribute, or provide any means of\n" +
+			"obtaining ROM files in circumvention of copyright.",
 		EnableShellCompletion: true,
 		Commands: []*cli.Command{
 			{

@@ -9,6 +9,8 @@
 
 CLI for searching ROMs on [edgeemu.net](https://edgeemu.net).
 
+> **Note:** this is an information tool only — see the [disclaimer](#disclaimer).
+
 ## Install
 
 Homebrew (macOS / Linux):
@@ -56,11 +58,11 @@ keeps them clickable:
 ```
 1. Sonic The Hedgehog (USA, Europe)
    system: Sega Mega Drive / Genesis · size: 377.87k · unpacked: 512.00k · dls: 588 · hash: F9394E97
-   https://edgeemu.net/download/sega-genesis/Sonic%20The%20Hedgehog%20%28USA%2C%20Europe%29.zip
+   https://edgeemu.net/[...]/sega-genesis/[...].zip
 
 2. Sonic The Hedgehog 2 (World)
    system: Sega Mega Drive / Genesis · size: 732.08k · unpacked: 1.00m · dls: 432 · hash: 24AB4C3A
-   https://edgeemu.net/download/sega-genesis/Sonic%20The%20Hedgehog%202%20%28World%29.zip
+   https://edgeemu.net/[...]/sega-genesis/[...].zip
 ```
 
 Every field is shown by default. Use `-c` to narrow the output to specific fields: `name`, `system`, `size`, `unpacked`,
@@ -121,3 +123,11 @@ task --list       # everything else
 | `-c, --columns` | search          | Comma-separated fields to show              |
 | `-f, --format`  | search, systems | Output format: list, json, yaml, xml or csv |
 | `-r, --refresh` | systems         | Bypass the cache and refetch                |
+
+## Disclaimer
+
+edgeemu-cli is an **information tool**: it queries the public search on edgeemu.net and displays the metadata and links
+that the site itself publishes — nothing more. It has **no download functionality**, does not host or distribute any
+ROM files, and does not bypass any access controls or copyright protection. Whether obtaining a particular ROM is
+lawful depends on your jurisdiction and on whether you own the original media — that responsibility lies entirely with
+you. This project is not affiliated with edgeemu.net or any console manufacturer.
