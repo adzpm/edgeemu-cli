@@ -124,3 +124,38 @@ func TestSystemsWithoutClientErrors(t *testing.T) {
 	_, err := c.Systems(context.Background(), false)
 	require.Error(t, err, "cache miss without a client must error, not panic")
 }
+
+func TestStoreFailuresAreNonFatal(t *testing.T) {
+	// The cache directory path is blocked by a regular file: storing
+	// silently fails, but Systems must still return the fetched list.
+	tmp := t.TempDir()
+	blocked := filepath.Join(tmp, "blocked")
+	require.NoError(t, os.WriteFile(blocked, []byte("not a dir"), 0o644))
+
+	var hits atomic.Int32
+	c := New(WithClient(newTestClient(t, &hits)), WithPath(filepath.Join(blocked, "systems.json")))
+
+	systems, err := c.Systems(context.Background(), false)
+	require.NoError(t, err, "a failed cache write must not fail the call")
+	assert.Len(t, systems, 3)
+}
+
+func TestDefaultPathUsesUserCacheDir(t *testing.T) {
+	// Without WithPath the cache must land in the user cache directory.
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)                                        // darwin
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))     // linux
+	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData")) // windows
+
+	var hits atomic.Int32
+	c := New(WithClient(newTestClient(t, &hits)))
+
+	_, err := c.Systems(context.Background(), false)
+	require.NoError(t, err)
+
+	dir, err := os.UserCacheDir()
+	require.NoError(t, err)
+
+	assert.FileExists(t, filepath.Join(dir, "edgeemu", "systems.json"))
+	assert.Len(t, c.Load(0), 3, "Load must read from the same default path")
+}

@@ -93,3 +93,22 @@ func TestInstallUnsupportedShell(t *testing.T) {
 
 	require.Error(t, runInstall(t, "tcsh"))
 }
+
+func TestInstallFailsWhenConfigDirIsAFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	// fish needs ~/.config/fish/; a file in the way must surface an error.
+	require.NoError(t, os.WriteFile(filepath.Join(home, ".config"), []byte("not a dir"), 0o644))
+
+	require.Error(t, runInstall(t, "fish"))
+}
+
+func TestInstallFailsWhenRcPathIsADirectory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	require.NoError(t, os.MkdirAll(filepath.Join(home, ".zshrc"), 0o755))
+
+	require.Error(t, runInstall(t, "zsh"))
+}

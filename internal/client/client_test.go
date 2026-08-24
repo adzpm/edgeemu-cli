@@ -131,3 +131,9 @@ func TestWithHTTPClientNilIgnored(t *testing.T) {
 	c := New(WithHTTPClient(nil))
 	assert.NotNil(t, c.http, "nil http client must not replace the default")
 }
+
+func TestWithHTTPClientOverrides(t *testing.T) {
+	custom := &http.Client{Timeout: time.Second}
+	c := New(WithHTTPClient(custom))
+	assert.Same(t, custom, c.http)
+}

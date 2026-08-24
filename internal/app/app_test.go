@@ -16,7 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
+	"github.com/adzpm/edgeemu-cli/internal/cache"
 	"github.com/adzpm/edgeemu-cli/internal/client"
+	"github.com/adzpm/edgeemu-cli/internal/completion"
 	"github.com/adzpm/edgeemu-cli/internal/ds"
 	"github.com/adzpm/edgeemu-cli/internal/fixtures"
 	"github.com/adzpm/edgeemu-cli/internal/render"
@@ -51,6 +53,30 @@ func sandboxCacheDir(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, ".cache"))
 	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData"))
+}
+
+func TestNewAppliesAllOptions(t *testing.T) {
+	edge := client.New()
+	c := cache.New(cache.WithClient(edge))
+	p := render.New()
+	comp := completion.New(completion.WithCache(c))
+
+	a := New(WithClient(edge), WithCache(c), WithPrinter(p), WithCompletion(comp))
+
+	assert.Same(t, edge, a.edge)
+	assert.Same(t, c, a.cache)
+	assert.Same(t, p, a.printer)
+	assert.Same(t, comp, a.comp)
+}
+
+func TestNewBuildsDefaults(t *testing.T) {
+	a := New()
+
+	assert.NotNil(t, a.edge)
+	assert.NotNil(t, a.cache)
+	assert.NotNil(t, a.printer)
+	assert.NotNil(t, a.comp)
+	assert.NotNil(t, a.Root())
 }
 
 func TestSearchDefaultsToListWithAllFields(t *testing.T) {
