@@ -1,5 +1,12 @@
 # edgeemu-cli
 
+[![release](https://img.shields.io/github/v/release/adzpm/edgeemu-cli?sort=semver)](https://github.com/adzpm/edgeemu-cli/releases/latest)
+[![ci](https://github.com/adzpm/edgeemu-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/adzpm/edgeemu-cli/actions/workflows/ci.yml)
+[![coverage](https://raw.githubusercontent.com/adzpm/edgeemu-cli/badges/coverage.svg)](https://github.com/adzpm/edgeemu-cli/actions/workflows/ci.yml)
+[![go report](https://goreportcard.com/badge/github.com/adzpm/edgeemu-cli)](https://goreportcard.com/report/github.com/adzpm/edgeemu-cli)
+[![go version](https://img.shields.io/github/go-mod/go-version/adzpm/edgeemu-cli)](go.mod)
+[![license](https://img.shields.io/github/license/adzpm/edgeemu-cli)](LICENSE)
+
 CLI for searching ROMs on [edgeemu.net](https://edgeemu.net).
 
 ## Install

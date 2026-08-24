@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: write # to push the coverage badge to the badges branch
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -23,5 +26,23 @@ jobs:
       - name: Install golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.13.1
 
-      - name: Check (fmt, vet, lint, tests)
-        run: task check
+      - name: Check (fmt, vet, lint) and tests with coverage
+        run: task fmt:check vet lint cover
+
+      - name: Publish coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PCT=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          mkdir -p /tmp/badges
+          ./scripts/coverage-badge.sh "$PCT" > /tmp/badges/coverage.svg
+          cd /tmp/badges
+          git init -q -b badges
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git add coverage.svg
+          git commit -q -m "coverage badge: ${PCT}%"
+          # single-commit branch, force-pushed: no history buildup
+          git push -qf origin badges
