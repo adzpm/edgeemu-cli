@@ -89,11 +89,12 @@ edgeemu install-completion zsh       # or name it explicitly (zsh, bash, fish)
 ```
 
 Adds a completion hook to your shell rc file. Completes commands, flags, system IDs after `-s` (instantly, from the
-cache) and column IDs after `-c`. To print the raw completion script instead, use `edgeemu completion <shell>`.
+cache), field IDs after `-c` and formats after `-f`. To print the raw completion script instead, use
+`edgeemu completion <shell>`.
 
 ## Development
 
-Common tasks are defined in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint`):
+Common tasks are defined in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint goreleaser`):
 
 ```sh
 task build        # build with the version stamped from git
@@ -113,10 +114,10 @@ task --list       # everything else
 
 ## Flags
 
-| Flag            | Commands        | Description                            |
-|-----------------|-----------------|----------------------------------------|
-| `-s, --system`  | search          | System to search in (default: all)     |
-| `-l, --limit`   | search          | Max results to show                    |
-| `-c, --columns` | search          | Comma-separated fields to show         |
+| Flag            | Commands        | Description                                 |
+|-----------------|-----------------|---------------------------------------------|
+| `-s, --system`  | search          | System to search in (default: all)          |
+| `-l, --limit`   | search          | Max results to show                         |
+| `-c, --columns` | search          | Comma-separated fields to show              |
 | `-f, --format`  | search, systems | Output format: list, json, yaml, xml or csv |
-| `-r, --refresh` | systems         | Bypass the cache and refetch           |
+| `-r, --refresh` | systems         | Bypass the cache and refetch                |
