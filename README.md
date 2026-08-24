@@ -35,8 +35,8 @@ Or build from source:
 go build -o edgeemu ./cmd/edgeemu
 ```
 
-Prebuilt binaries for macOS, Linux and Windows (amd64/arm64) are attached
-to every [release](https://github.com/adzpm/edgeemu-cli/releases).
+Prebuilt binaries for macOS, Linux and Windows (amd64/arm64) are attached to
+every [release](https://github.com/adzpm/edgeemu-cli/releases).
 
 ## Usage
 
@@ -50,8 +50,8 @@ edgeemu search sonic -c name,size,dls,url     # pick fields to show
 edgeemu search sonic -f json                  # machine-readable output (json, yaml or xml)
 ```
 
-The default `list` format never truncates anything, and download URLs sit
-alone on their own line so the terminal always keeps them clickable:
+The default `list` format never truncates anything, and download URLs sit alone on their own line so the terminal always
+keeps them clickable:
 
 ```
 1. Sonic The Hedgehog (USA, Europe)
@@ -63,8 +63,9 @@ alone on their own line so the terminal always keeps them clickable:
    https://edgeemu.net/download/sega-genesis/Sonic%20The%20Hedgehog%202%20%28World%29.zip
 ```
 
-Every field is shown by default. Use `-c` to narrow the output to specific
-fields: `name`, `system`, `size`, `unpacked`, `dls`, `hash`, `url`.
+Every field is shown by default. Use `-c` to narrow the output to specific fields: `name`, `system`, `size`, `unpacked`,
+`dls`, `hash`, `url`. The selection applies to every output format — in `json`, `yaml` and `xml` the field IDs are used
+as keys, and only the selected fields are encoded.
 
 > Note: the site returns at most 100 results per query. If you hit exactly 100,
 > narrow the query or search within a specific system via `-s`.
@@ -112,10 +113,10 @@ task --list       # everything else
 
 ## Flags
 
-| Flag            | Commands | Description                        |
-|-----------------|----------|------------------------------------|
-| `-s, --system`  | search   | System to search in (default: all) |
-| `-l, --limit`   | search   | Max results to show                |
-| `-c, --columns` | search   | Comma-separated fields to show     |
+| Flag            | Commands        | Description                            |
+|-----------------|-----------------|----------------------------------------|
+| `-s, --system`  | search          | System to search in (default: all)     |
+| `-l, --limit`   | search          | Max results to show                    |
+| `-c, --columns` | search          | Comma-separated fields to show         |
 | `-f, --format`  | search, systems | Output format: list, json, yaml or xml |
-| `-r, --refresh` | systems  | Bypass the cache and refetch       |
+| `-r, --refresh` | systems         | Bypass the cache and refetch           |

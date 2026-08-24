@@ -8,13 +8,12 @@ vars:
   GORELEASER_CONFIG: "{{.ROOT_DIR}}/.goreleaser.yaml"
   COVERAGE_FILE: "{{.ROOT_DIR}}/coverage.out"
   DIST_DIR: "{{.ROOT_DIR}}/dist"
-  VERSION:
-    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+  VERSION: { sh: git describe --tags --always --dirty 2>/dev/null || echo dev }
   LDFLAGS: -s -w -X main.version={{.VERSION}}
 
 tasks:
   default:
-    deps: [check]
+    deps: [ check ]
 
   build:
     desc: Build the binary

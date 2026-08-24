@@ -7,7 +7,6 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/adzpm/edgeemu-cli/internal/ds"
 	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
@@ -18,8 +17,6 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("usage: edgeemu search <query>")
 	}
 
-	format := cmd.String(formatFlag.Name)
-
 	roms, err := a.edge.Search(ctx, query, cmd.String(systemFlag.Name))
 	if err != nil {
 		return err
@@ -29,29 +26,22 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 		roms = roms[:limit]
 	}
 
-	switch format {
-	case "json", "yaml", "xml":
-		if roms == nil {
-			roms = []ds.ROM{} // encode as an empty list, not null
-		}
+	columns := cmd.StringSlice(columnsFlag.Name)
+	if len(columns) == 0 {
+		columns = render.ColumnIDs() // everything, explicitly
+	}
 
-		switch format {
-		case "json":
-			return a.printer.JSON(roms)
-		case "yaml":
-			return a.printer.YAML(roms)
-		default:
-			return a.printer.XMLROMs(roms)
-		}
+	switch format := cmd.String(formatFlag.Name); format {
+	case "json":
+		return a.printer.JSONROMs(roms, columns)
+	case "yaml":
+		return a.printer.YAMLROMs(roms, columns)
+	case "xml":
+		return a.printer.XMLROMs(roms, columns)
 	case "list":
 		if len(roms) == 0 {
 			fmt.Fprintln(a.printer.Writer(), "nothing found")
 			return nil
-		}
-
-		columns := cmd.StringSlice(columnsFlag.Name)
-		if len(columns) == 0 {
-			columns = render.ColumnIDs() // everything, explicitly
 		}
 
 		return a.printer.PrintROMs(roms, columns)

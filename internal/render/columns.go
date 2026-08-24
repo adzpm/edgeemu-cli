@@ -2,7 +2,6 @@ package render
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/adzpm/edgeemu-cli/internal/ds"
@@ -11,18 +10,18 @@ import (
 // romColumn is a selectable field of the search results output.
 type romColumn struct {
 	id    string
-	value func(ds.ROM) string
+	value func(ds.ROM) any
 }
 
 // romColumns lists all selectable fields in their display order.
 var romColumns = []romColumn{
-	{"name", func(r ds.ROM) string { return r.Name }},
-	{"system", func(r ds.ROM) string { return r.System }},
-	{"size", func(r ds.ROM) string { return r.Size }},
-	{"unpacked", func(r ds.ROM) string { return r.UnpackedSize }},
-	{"dls", func(r ds.ROM) string { return strconv.Itoa(r.Downloads) }},
-	{"hash", func(r ds.ROM) string { return r.Hash }},
-	{"url", func(r ds.ROM) string { return r.URL }},
+	{"name", func(r ds.ROM) any { return r.Name }},
+	{"system", func(r ds.ROM) any { return r.System }},
+	{"size", func(r ds.ROM) any { return r.Size }},
+	{"unpacked", func(r ds.ROM) any { return r.UnpackedSize }},
+	{"dls", func(r ds.ROM) any { return r.Downloads }},
+	{"hash", func(r ds.ROM) any { return r.Hash }},
+	{"url", func(r ds.ROM) any { return r.URL }},
 }
 
 // ColumnIDs returns the IDs of all selectable fields in display order.

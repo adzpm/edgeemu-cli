@@ -53,7 +53,7 @@ func (p *Printer) PrintROMs(roms []ds.ROM, columnIDs []string) error {
 		if len(fields) > 0 {
 			parts := make([]string, 0, len(fields))
 			for _, c := range fields {
-				parts = append(parts, c.id+": "+c.value(r))
+				parts = append(parts, fmt.Sprintf("%s: %v", c.id, c.value(r)))
 			}
 			if _, err := fmt.Fprintf(p.w, "%s%s\n", indent, strings.Join(parts, " · ")); err != nil {
 				return err

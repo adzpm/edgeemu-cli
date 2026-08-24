@@ -11,17 +11,12 @@ import (
 // valid document, so each list gets a root element here.
 type xmlROMs struct {
 	XMLName xml.Name `xml:"roms"`
-	ROMs    []ds.ROM `xml:"rom"`
+	ROMs    []record `xml:"rom"`
 }
 
 type xmlSystems struct {
 	XMLName xml.Name    `xml:"systems"`
 	Systems []ds.System `xml:"system"`
-}
-
-// XMLROMs renders search results as an XML document rooted at <roms>.
-func (p *Printer) XMLROMs(roms []ds.ROM) error {
-	return p.xml(xmlROMs{ROMs: roms})
 }
 
 // XMLSystems renders the systems list as an XML document rooted at <systems>.

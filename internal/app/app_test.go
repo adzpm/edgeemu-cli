@@ -81,24 +81,48 @@ func TestSearchJSON(t *testing.T) {
 	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "json")
 	require.NoError(t, err)
 
-	var roms []ds.ROM
+	var roms []map[string]any
 	require.NoError(t, json.Unmarshal([]byte(out), &roms), "output is not valid JSON:\n%s", out)
 
 	require.Len(t, roms, 2)
-	assert.Equal(t, "Sonic & Knuckles (World)", roms[0].Name)
-	assert.Equal(t, 341, roms[0].Downloads)
+	assert.Equal(t, "Sonic & Knuckles (World)", roms[0]["name"])
+	assert.EqualValues(t, 341, roms[0]["dls"], "dls must stay numeric")
+	assert.Equal(t, "256.00k", roms[0]["unpacked"])
+}
+
+func TestSearchJSONHonorsColumns(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "json", "-c", "name,dls")
+	require.NoError(t, err)
+
+	var roms []map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &roms))
+
+	require.Len(t, roms, 2)
+	assert.Equal(t, map[string]any{"name": "Sonic & Knuckles (World)", "dls": float64(341)}, roms[0],
+		"only the selected fields must be encoded")
 }
 
 func TestSearchYAML(t *testing.T) {
 	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "--format", "yaml")
 	require.NoError(t, err)
 
-	var roms []ds.ROM
+	var roms []map[string]any
 	require.NoError(t, yaml.Unmarshal([]byte(out), &roms), "output is not valid YAML:\n%s", out)
 
 	require.Len(t, roms, 2)
-	assert.Equal(t, "Sonic & Knuckles (World)", roms[0].Name)
-	assert.Equal(t, "256.00k", roms[0].UnpackedSize)
+	assert.Equal(t, "Sonic & Knuckles (World)", roms[0]["name"])
+	assert.Equal(t, "256.00k", roms[0]["unpacked"])
+}
+
+func TestSearchYAMLHonorsColumns(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "yaml", "-c", "name")
+	require.NoError(t, err)
+
+	var roms []map[string]any
+	require.NoError(t, yaml.Unmarshal([]byte(out), &roms))
+
+	require.Len(t, roms, 2)
+	assert.Equal(t, map[string]any{"name": "Sonic & Knuckles (World)"}, roms[0])
 }
 
 func TestSearchXML(t *testing.T) {
@@ -106,13 +130,27 @@ func TestSearchXML(t *testing.T) {
 	require.NoError(t, err)
 
 	var doc struct {
-		ROMs []ds.ROM `xml:"rom"`
+		ROMs []struct {
+			Name string `xml:"name"`
+			DLs  int    `xml:"dls"`
+		} `xml:"rom"`
 	}
 	require.NoError(t, xml.Unmarshal([]byte(out), &doc), "output is not valid XML:\n%s", out)
 
 	require.Len(t, doc.ROMs, 2)
 	assert.Equal(t, "Sonic & Knuckles (World)", doc.ROMs[0].Name)
+	assert.Equal(t, 341, doc.ROMs[0].DLs)
 	assert.True(t, strings.HasPrefix(out, xml.Header), "XML output must start with the declaration")
+}
+
+func TestSearchXMLHonorsColumns(t *testing.T) {
+	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "xml", "-c", "name,url")
+	require.NoError(t, err)
+
+	assert.Contains(t, out, "<name>")
+	assert.Contains(t, out, "<url>")
+	assert.NotContains(t, out, "<hash>", "unselected fields must not be encoded")
+	assert.NotContains(t, out, "<dls>")
 }
 
 func TestSystemsXML(t *testing.T) {
@@ -145,7 +183,7 @@ func TestSearchLimit(t *testing.T) {
 	out, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-f", "json", "-l", "1")
 	require.NoError(t, err)
 
-	var roms []ds.ROM
+	var roms []map[string]any
 	require.NoError(t, json.Unmarshal([]byte(out), &roms))
 	assert.Len(t, roms, 1)
 }
