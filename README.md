@@ -127,7 +127,7 @@ task --list       # everything else
 ## Disclaimer
 
 edgeemu-cli is an **information tool**: it queries the public search on edgeemu.net and displays the metadata and links
-that the site itself publishes — nothing more. It has **no download functionality**, does not host or distribute any
-ROM files, and does not bypass any access controls or copyright protection. Whether obtaining a particular ROM is
-lawful depends on your jurisdiction and on whether you own the original media — that responsibility lies entirely with
-you. This project is not affiliated with edgeemu.net or any console manufacturer.
+that the site itself publishes — nothing more. It has **no download functionality**, does not host or distribute any ROM
+files, and does not bypass any access controls or copyright protection. Whether obtaining a particular ROM is lawful
+depends on your jurisdiction and on whether you own the original media — that responsibility lies entirely with you.
+This project is not affiliated with edgeemu.net or any console manufacturer.
