@@ -4,6 +4,20 @@ CLI for searching ROMs on [edgeemu.net](https://edgeemu.net).
 
 ## Install
 
+Homebrew (macOS / Linux):
+
+```sh
+brew install adzpm/tap/edgeemu
+```
+
+Debian / Ubuntu — grab the `.deb` from the [latest release](https://github.com/adzpm/edgeemu-cli/releases/latest):
+
+```sh
+sudo dpkg -i edgeemu_*_linux_amd64.deb
+```
+
+Go:
+
 ```sh
 go install github.com/adzpm/edgeemu-cli/cmd/edgeemu@latest
 ```
@@ -13,6 +27,9 @@ Or build from source:
 ```sh
 go build -o edgeemu ./cmd/edgeemu
 ```
+
+Prebuilt binaries for macOS, Linux and Windows (amd64/arm64) are attached
+to every [release](https://github.com/adzpm/edgeemu-cli/releases).
 
 ## Usage
 
@@ -62,6 +79,18 @@ edgeemu install-completion zsh       # or name it explicitly (zsh, bash, fish)
 
 Adds a completion hook to your shell rc file. Completes commands, flags, system IDs after `-s` (instantly, from the
 cache) and column IDs after `-c`. To print the raw completion script instead, use `edgeemu completion <shell>`.
+
+## Development
+
+Common tasks are defined in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint`):
+
+```sh
+task build        # build with the version stamped from git
+task check        # full gate: fmt, vet, lint, tests (also runs in CI)
+task test         # tests only
+task snapshot     # local goreleaser dry run
+task --list       # everything else
+```
 
 ## Commands
 

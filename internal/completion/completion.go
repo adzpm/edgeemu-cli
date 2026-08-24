@@ -148,9 +148,12 @@ func (c *Completion) Install(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	defer f.Close()
-
 	if _, err := fmt.Fprintf(f, "\n%s\n%s\n", marker, line); err != nil {
+		_ = f.Close()
+		return err
+	}
+
+	if err := f.Close(); err != nil {
 		return err
 	}
 

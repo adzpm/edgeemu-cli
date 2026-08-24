@@ -1,0 +1,17 @@
+version: "2"
+
+linters:
+  settings:
+    errcheck:
+      exclude-functions:
+        # Terminal output: nowhere to report a stdout write error anyway.
+        - fmt.Fprintln
+        - fmt.Fprintf
+        # Deferred close of a fully-read response body.
+        - (io.ReadCloser).Close
+  exclusions:
+    rules:
+      # Test helpers intentionally ignore write errors on stubs and buffers.
+      - path: _test\.go
+        linters:
+          - errcheck

@@ -119,18 +119,18 @@ func (c *Cache) store(systems []ds.System) {
 	}
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
 		return
 	}
 
 	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return
 	}
 
 	if os.Chmod(tmp.Name(), 0o644) != nil || os.Rename(tmp.Name(), p) != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 	}
 }
 
