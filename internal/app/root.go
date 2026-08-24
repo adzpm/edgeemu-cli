@@ -1,3 +1,5 @@
+// Package app wires clients, cache, rendering and completion into
+// the CLI command tree.
 package app
 
 import (
@@ -22,8 +24,8 @@ var (
 	formatFlag = &cli.StringFlag{
 		Name:    "format",
 		Aliases: []string{"f"},
-		Value:   "list",
-		Usage:   "output format: list, json, yaml, xml or csv",
+		Value:   render.FormatList,
+		Usage:   "output format: " + strings.Join(render.Formats(), ", "),
 	}
 
 	limitFlag = &cli.IntFlag{
@@ -88,12 +90,15 @@ func New(opts ...Option) *App {
 	if a.edge == nil {
 		a.edge = client.New()
 	}
+
 	if a.cache == nil {
 		a.cache = cache.New(cache.WithClient(a.edge))
 	}
+
 	if a.printer == nil {
 		a.printer = render.New()
 	}
+
 	if a.comp == nil {
 		a.comp = completion.New(completion.WithCache(a.cache))
 	}

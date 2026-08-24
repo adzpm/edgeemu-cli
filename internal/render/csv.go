@@ -32,7 +32,8 @@ func (p *Printer) CSVROMs(roms []ds.ROM, columnIDs []string) error {
 			row = append(row, fmt.Sprint(c.value(r)))
 		}
 
-		if err := w.Write(row); err != nil {
+		err := w.Write(row)
+		if err != nil {
 			return err
 		}
 	}
@@ -46,12 +47,14 @@ func (p *Printer) CSVROMs(roms []ds.ROM, columnIDs []string) error {
 func (p *Printer) CSVSystems(systems []ds.System) error {
 	w := csv.NewWriter(p.w)
 
-	if err := w.Write([]string{"id", "name"}); err != nil {
+	err := w.Write([]string{"id", colName})
+	if err != nil {
 		return err
 	}
 
 	for _, s := range systems {
-		if err := w.Write([]string{s.ID, s.Name}); err != nil {
+		err := w.Write([]string{s.ID, s.Name})
+		if err != nil {
 			return err
 		}
 	}

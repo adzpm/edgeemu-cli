@@ -30,6 +30,7 @@ func TestSearch(t *testing.T) {
 		gotMethod = r.Method
 		gotQuery = r.FormValue("search")
 		gotSystem = r.FormValue("system")
+
 		w.Write([]byte(fixtures.SearchPage))
 	})
 
@@ -55,7 +56,7 @@ func TestSearch(t *testing.T) {
 }
 
 func TestSearchNoResults(t *testing.T) {
-	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(fixtures.EmptyPage))
 	})
 
@@ -65,7 +66,7 @@ func TestSearchNoResults(t *testing.T) {
 }
 
 func TestSearchHTTPError(t *testing.T) {
-	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	})
 
@@ -74,7 +75,7 @@ func TestSearchHTTPError(t *testing.T) {
 }
 
 func TestSearchContextCancelled(t *testing.T) {
-	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	c := newTestClient(t, func(_ http.ResponseWriter, r *http.Request) {
 		// Drain the body first: the server only notices a dropped client
 		// (and cancels r.Context()) once the request body is consumed.
 		io.Copy(io.Discard, r.Body)
@@ -105,7 +106,7 @@ func TestSystems(t *testing.T) {
 }
 
 func TestSystemsEmptyPageIsError(t *testing.T) {
-	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(`<html><body>layout changed</body></html>`))
 	})
 
@@ -114,7 +115,7 @@ func TestSystemsEmptyPageIsError(t *testing.T) {
 }
 
 func TestSystemsHTTPError(t *testing.T) {
-	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusBadGateway)
 	})
 

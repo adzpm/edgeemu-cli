@@ -29,6 +29,7 @@ func records(roms []ds.ROM, columnIDs []string) ([]record, error) {
 	}
 
 	recs := make([]record, 0, len(roms))
+
 	for _, r := range roms {
 		rec := make(record, 0, len(cols))
 		for _, c := range cols {
@@ -43,6 +44,7 @@ func records(roms []ds.ROM, columnIDs []string) ([]record, error) {
 
 func (r record) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
+
 	buf.WriteByte('{')
 
 	for i, f := range r {
@@ -76,10 +78,13 @@ func (r record) MarshalYAML() (any, error) {
 	for _, f := range r {
 		var k, v yaml.Node
 
-		if err := k.Encode(f.id); err != nil {
+		err := k.Encode(f.id)
+		if err != nil {
 			return nil, err
 		}
-		if err := v.Encode(f.value); err != nil {
+
+		err = v.Encode(f.value)
+		if err != nil {
 			return nil, err
 		}
 
@@ -90,12 +95,14 @@ func (r record) MarshalYAML() (any, error) {
 }
 
 func (r record) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	if err := e.EncodeToken(start); err != nil {
+	err := e.EncodeToken(start)
+	if err != nil {
 		return err
 	}
 
 	for _, f := range r {
-		if err := e.EncodeElement(f.value, xml.StartElement{Name: xml.Name{Local: f.id}}); err != nil {
+		err := e.EncodeElement(f.value, xml.StartElement{Name: xml.Name{Local: f.id}})
+		if err != nil {
 			return err
 		}
 	}

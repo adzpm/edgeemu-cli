@@ -29,12 +29,14 @@ import (
 func runCLI(t *testing.T, page string, args ...string) (string, error) {
 	t.Helper()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(page))
 	}))
+
 	t.Cleanup(srv.Close)
 
 	var buf bytes.Buffer
+
 	root := New(
 		WithClient(client.New(client.WithBaseURL(srv.URL))),
 		WithPrinter(render.New(render.WithWriter(&buf))),
@@ -109,6 +111,7 @@ func TestSearchJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	var roms []map[string]any
+
 	require.NoError(t, json.Unmarshal([]byte(out), &roms), "output is not valid JSON:\n%s", out)
 
 	require.Len(t, roms, 2)
@@ -122,6 +125,7 @@ func TestSearchJSONHonorsColumns(t *testing.T) {
 	require.NoError(t, err)
 
 	var roms []map[string]any
+
 	require.NoError(t, json.Unmarshal([]byte(out), &roms))
 
 	require.Len(t, roms, 2)
@@ -134,6 +138,7 @@ func TestSearchYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	var roms []map[string]any
+
 	require.NoError(t, yaml.Unmarshal([]byte(out), &roms), "output is not valid YAML:\n%s", out)
 
 	require.Len(t, roms, 2)
@@ -146,6 +151,7 @@ func TestSearchYAMLHonorsColumns(t *testing.T) {
 	require.NoError(t, err)
 
 	var roms []map[string]any
+
 	require.NoError(t, yaml.Unmarshal([]byte(out), &roms))
 
 	require.Len(t, roms, 2)
@@ -162,6 +168,7 @@ func TestSearchXML(t *testing.T) {
 			DLs  int    `xml:"dls"`
 		} `xml:"rom"`
 	}
+
 	require.NoError(t, xml.Unmarshal([]byte(out), &doc), "output is not valid XML:\n%s", out)
 
 	require.Len(t, doc.ROMs, 2)
@@ -189,6 +196,7 @@ func TestSystemsXML(t *testing.T) {
 	var doc struct {
 		Systems []ds.System `xml:"system"`
 	}
+
 	require.NoError(t, xml.Unmarshal([]byte(out), &doc))
 	assert.Len(t, doc.Systems, 3)
 }
@@ -250,6 +258,7 @@ func TestSearchLimit(t *testing.T) {
 	require.NoError(t, err)
 
 	var roms []map[string]any
+
 	require.NoError(t, json.Unmarshal([]byte(out), &roms))
 	assert.Len(t, roms, 1)
 }
@@ -291,6 +300,7 @@ func TestSystemsJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	var systems []ds.System
+
 	require.NoError(t, json.Unmarshal([]byte(out), &systems))
 	assert.Len(t, systems, 3)
 }
@@ -302,6 +312,7 @@ func TestSystemsYAML(t *testing.T) {
 	require.NoError(t, err)
 
 	var systems []ds.System
+
 	require.NoError(t, yaml.Unmarshal([]byte(out), &systems))
 	assert.Len(t, systems, 3)
 	assert.Equal(t, "atari-2600", systems[0].ID)

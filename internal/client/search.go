@@ -30,6 +30,7 @@ func (c *Client) Search(ctx context.Context, query, system string) ([]ds.ROM, er
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := c.http.Do(req)
@@ -40,7 +41,7 @@ func (c *Client) Search(ctx context.Context, query, system string) ([]ds.ROM, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("search failed: %s", resp.Status)
+		return nil, fmt.Errorf("search: %w: %s", ErrRequestFailed, resp.Status)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))

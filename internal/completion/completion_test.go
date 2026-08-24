@@ -20,7 +20,7 @@ import (
 // slow or unreachable site: with no cache available, the network fetch
 // must be abandoned after fetchTimeout.
 func TestSearchCompletionDoesNotHang(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		select { // never answers in time, but frees up once the client gives up
 		case <-r.Context().Done():
 		case <-time.After(30 * time.Second):
@@ -29,7 +29,9 @@ func TestSearchCompletionDoesNotHang(t *testing.T) {
 	defer srv.Close()
 
 	origArgs := os.Args
+
 	os.Args = []string{"edgeemu", "search", "-s", "--generate-shell-completion"}
+
 	defer func() { os.Args = origArgs }()
 
 	c := cache.New(
@@ -39,6 +41,7 @@ func TestSearchCompletionDoesNotHang(t *testing.T) {
 	cmd := &cli.Command{Name: "edgeemu", Writer: io.Discard}
 
 	start := time.Now()
+
 	New(WithCache(c)).Search(context.Background(), cmd)
 
 	assert.Less(t, time.Since(start), fetchTimeout+2*time.Second, "completion blocked the shell")

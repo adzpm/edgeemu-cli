@@ -23,6 +23,7 @@ func TestROMJSONTags(t *testing.T) {
 	require.NoError(t, err)
 
 	var m map[string]any
+
 	require.NoError(t, json.Unmarshal(data, &m))
 
 	for _, key := range []string{"name", "system", "url", "size", "unpacked_size", "downloads", "hash"} {
@@ -30,6 +31,7 @@ func TestROMJSONTags(t *testing.T) {
 	}
 
 	var back ROM
+
 	require.NoError(t, json.Unmarshal(data, &back))
 	assert.Equal(t, rom, back, "JSON round trip must be lossless")
 }

@@ -17,5 +17,6 @@ func (p *Printer) JSON(v any) error {
 	}
 
 	_, err = fmt.Fprintf(p.w, "%s\n", out)
+
 	return err
 }

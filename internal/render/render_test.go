@@ -37,11 +37,18 @@ func TestSelectColumnsUnknown(t *testing.T) {
 
 func TestPrintROMs(t *testing.T) {
 	roms := []ds.ROM{
-		{Name: "Sonic & Knuckles (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/very/long/url/1.zip", Size: "1.36m", Downloads: 341, Hash: "4DCFD55C"},
-		{Name: "Sonic The Hedgehog 2 (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/2.zip", Size: "732.08k", Downloads: 432, Hash: "24AB4C3A"},
+		{
+			Name: "Sonic & Knuckles (World)", System: "Sega Mega Drive / Genesis",
+			URL: "https://example.com/very/long/url/1.zip", Size: "1.36m", Downloads: 341, Hash: "4DCFD55C",
+		},
+		{
+			Name: "Sonic The Hedgehog 2 (World)", System: "Sega Mega Drive / Genesis",
+			URL: "https://example.com/2.zip", Size: "732.08k", Downloads: 432, Hash: "24AB4C3A",
+		},
 	}
 
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).PrintROMs(roms, []string{"name", "system", "size", "url"}))
 	out := buf.String()
 
@@ -52,13 +59,16 @@ func TestPrintROMs(t *testing.T) {
 
 	// The URL must sit alone on its own line, untouched.
 	var urlLines int
-	for _, line := range strings.Split(out, "\n") {
+
+	for line := range strings.SplitSeq(out, "\n") {
 		if strings.Contains(line, "https://") {
 			urlLines++
+
 			assert.Equal(t, "https", strings.SplitN(strings.TrimSpace(line), ":", 2)[0])
 			assert.NotContains(t, line, "·", "URL line must not carry other fields")
 		}
 	}
+
 	assert.Equal(t, 2, urlLines)
 }
 
@@ -66,6 +76,7 @@ func TestPrintROMsMinimalColumns(t *testing.T) {
 	roms := []ds.ROM{{Name: "Sonic", URL: "https://example.com/1.zip", Size: "1m"}}
 
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).PrintROMs(roms, []string{"name", "url"}))
 	out := buf.String()
 
@@ -76,6 +87,7 @@ func TestPrintROMsMinimalColumns(t *testing.T) {
 
 func TestPrintROMsUnknownColumn(t *testing.T) {
 	var buf bytes.Buffer
+
 	err := New(WithWriter(&buf)).PrintROMs([]ds.ROM{{Name: "x"}}, []string{"nope"})
 	require.Error(t, err)
 }
@@ -87,6 +99,7 @@ func TestPrintSystemsAligned(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).PrintSystems(systems))
 
 	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")

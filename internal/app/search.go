@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
+	"github.com/adzpm/edgeemu-cli/internal/ds"
 	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
@@ -14,7 +15,7 @@ import (
 func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 	query := strings.TrimSpace(strings.Join(cmd.Args().Slice(), " "))
 	if query == "" {
-		return fmt.Errorf("usage: edgeemu search <query>")
+		return ErrUsage
 	}
 
 	roms, err := a.edge.Search(ctx, query, cmd.String(systemFlag.Name))
@@ -31,23 +32,29 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 		columns = render.ColumnIDs() // everything, explicitly
 	}
 
-	switch format := cmd.String(formatFlag.Name); format {
-	case "json":
+	return a.printROMs(cmd.String(formatFlag.Name), roms, columns)
+}
+
+// printROMs renders search results in the requested format.
+func (a *App) printROMs(format string, roms []ds.ROM, columns []string) error {
+	switch format {
+	case render.FormatJSON:
 		return a.printer.JSONROMs(roms, columns)
-	case "yaml":
+	case render.FormatYAML:
 		return a.printer.YAMLROMs(roms, columns)
-	case "xml":
+	case render.FormatXML:
 		return a.printer.XMLROMs(roms, columns)
-	case "csv":
+	case render.FormatCSV:
 		return a.printer.CSVROMs(roms, columns)
-	case "list":
+	case render.FormatList:
 		if len(roms) == 0 {
 			fmt.Fprintln(a.printer.Writer(), "nothing found")
+
 			return nil
 		}
 
 		return a.printer.PrintROMs(roms, columns)
 	default:
-		return fmt.Errorf("unknown format %q (available: list, json, yaml, xml, csv)", format)
+		return fmt.Errorf("%w %q (available: %s)", ErrUnknownFormat, format, strings.Join(render.Formats(), ", "))
 	}
 }

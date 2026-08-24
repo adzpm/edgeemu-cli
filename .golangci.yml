@@ -1,6 +1,31 @@
 version: "2"
 
 linters:
+  default: all
+  disable:
+    # Requires an explicit allowlist of every import; policy tooling for
+    # monorepos, pure maintenance overhead for a 5-dependency CLI.
+    - depguard
+    # Requires every struct literal to set every field; unusable with
+    # cli.Command (~40 fields per command definition).
+    - exhaustruct
+    - exhaustruct_v5
+    # The CLI flag definitions are package-level by design.
+    - gochecknoglobals
+    # Bans the idiomatic `if err := f(); err != nil` form, contradicting
+    # standard Go style (and its autofix produces uncompilable code).
+    - noinlineerr
+    # Most tests mutate os.Args and the environment; t.Setenv is
+    # incompatible with t.Parallel, so the demand cannot be satisfied.
+    - paralleltest
+    # White-box tests are a deliberate choice here: internals like
+    # selectColumns and the cache store are worth testing directly.
+    - testpackage
+    # Bans idiomatic short names (p, w, c) for receivers and writers.
+    - varnamelen
+    # Wrapping every error from every external call adds noise; static
+    # sentinel errors (err113) already provide context where it matters.
+    - wrapcheck
   settings:
     errcheck:
       exclude-functions:
@@ -9,9 +34,24 @@ linters:
         - fmt.Fprintf
         # Deferred close of a fully-read response body.
         - (io.ReadCloser).Close
+    gosec:
+      excludes:
+        # G304 (file inclusion via variable): reading the cache file and
+        # shell rc files by a computed path is this CLI's job.
+        - G304
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+          xml: snake
   exclusions:
     rules:
-      # Test helpers intentionally ignore write errors on stubs and buffers.
+      # Tests: stub writers ignore errors on purpose, repeated literals
+      # are readable fixtures, and gosec's permission/error findings do
+      # not apply to throwaway temp files.
       - path: _test\.go
         linters:
           - errcheck
+          - goconst
+          - gosec

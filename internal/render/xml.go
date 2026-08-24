@@ -31,5 +31,6 @@ func (p *Printer) xml(v any) error {
 	}
 
 	_, err = fmt.Fprintf(p.w, "%s%s\n", xml.Header, out)
+
 	return err
 }

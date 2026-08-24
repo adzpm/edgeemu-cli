@@ -32,10 +32,13 @@ func runSearchComplete(t *testing.T, comp *Completion, lastArg string) string {
 	t.Helper()
 
 	origArgs := os.Args
+
 	os.Args = []string{"edgeemu", "search", lastArg, "--generate-shell-completion"}
+
 	defer func() { os.Args = origArgs }()
 
 	var buf bytes.Buffer
+
 	cmd := &cli.Command{Name: "edgeemu", Writer: &buf}
 
 	comp.Search(context.Background(), cmd)
@@ -45,10 +48,12 @@ func runSearchComplete(t *testing.T, comp *Completion, lastArg string) string {
 
 func TestSearchCompletesSystemsFromCacheWithoutNetwork(t *testing.T) {
 	var hits atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hits.Add(1)
 		w.Write([]byte(fixtures.SystemsPage))
 	}))
+
 	t.Cleanup(srv.Close)
 
 	c := cache.New(
@@ -68,9 +73,10 @@ func TestSearchCompletesSystemsFromCacheWithoutNetwork(t *testing.T) {
 }
 
 func TestSearchCompletesSystemsByFetchingWhenNoCache(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(fixtures.SystemsPage))
 	}))
+
 	t.Cleanup(srv.Close)
 
 	c := cache.New(
@@ -104,10 +110,13 @@ func runSearchCompleteArgs(t *testing.T, comp *Completion, words ...string) stri
 	t.Helper()
 
 	origArgs := os.Args
+
 	os.Args = append(append([]string{"edgeemu", "search"}, words...), "--generate-shell-completion")
+
 	defer func() { os.Args = origArgs }()
 
 	var buf bytes.Buffer
+
 	cmd := &cli.Command{
 		Name:   "edgeemu",
 		Writer: &buf,

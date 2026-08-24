@@ -36,7 +36,9 @@ func TestRcLine(t *testing.T) {
 		rcPath, line, err := rcLine(tc.shell, "/home/u")
 		require.NoError(t, err, tc.shell)
 
-		assert.True(t, strings.HasSuffix(rcPath, tc.wantPath), "rcLine(%s) path = %q, want suffix %q", tc.shell, rcPath, tc.wantPath)
+		assert.True(t, strings.HasSuffix(rcPath, tc.wantPath),
+			"rcLine(%s) path = %q, want suffix %q", tc.shell, rcPath, tc.wantPath)
+
 		for _, want := range tc.wantIn {
 			assert.Contains(t, line, want, tc.shell)
 		}

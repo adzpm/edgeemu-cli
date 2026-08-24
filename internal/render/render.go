@@ -1,3 +1,5 @@
+// Package render prints search results and system lists in all
+// supported output formats.
 package render
 
 import (

@@ -7,8 +7,11 @@ import (
 // YAML renders v as YAML.
 func (p *Printer) YAML(v any) error {
 	enc := yaml.NewEncoder(p.w)
-	if err := enc.Encode(v); err != nil {
+
+	err := enc.Encode(v)
+	if err != nil {
 		_ = enc.Close()
+
 		return err
 	}
 

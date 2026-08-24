@@ -28,10 +28,11 @@ func cachePath(t *testing.T) string {
 func newTestClient(t *testing.T, hits *atomic.Int32) *client.Client {
 	t.Helper()
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hits.Add(1)
 		w.Write([]byte(fixtures.SystemsPage))
 	}))
+
 	t.Cleanup(srv.Close)
 
 	return client.New(client.WithBaseURL(srv.URL))
@@ -39,6 +40,7 @@ func newTestClient(t *testing.T, hits *atomic.Int32) *client.Client {
 
 func TestSystemsFetchesOnceThenServesFromCache(t *testing.T) {
 	var hits atomic.Int32
+
 	c := New(WithClient(newTestClient(t, &hits)), WithPath(cachePath(t)))
 
 	first, err := c.Systems(context.Background(), false)
@@ -54,6 +56,7 @@ func TestSystemsFetchesOnceThenServesFromCache(t *testing.T) {
 
 func TestSystemsRefreshBypassesCache(t *testing.T) {
 	var hits atomic.Int32
+
 	c := New(WithClient(newTestClient(t, &hits)), WithPath(cachePath(t)))
 
 	_, err := c.Systems(context.Background(), false)
@@ -94,6 +97,7 @@ func TestLoadMissingAndCorrupt(t *testing.T) {
 
 func TestCustomTTL(t *testing.T) {
 	var hits atomic.Int32
+
 	c := New(WithClient(newTestClient(t, &hits)), WithPath(cachePath(t)), WithTTL(time.Nanosecond))
 
 	_, err := c.Systems(context.Background(), false)
@@ -108,9 +112,10 @@ func TestCustomTTL(t *testing.T) {
 }
 
 func TestSystemsFetchErrorIsReturned(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "down", http.StatusServiceUnavailable)
 	}))
+
 	t.Cleanup(srv.Close)
 
 	c := New(WithClient(client.New(client.WithBaseURL(srv.URL))), WithPath(cachePath(t)))
@@ -133,6 +138,7 @@ func TestStoreFailuresAreNonFatal(t *testing.T) {
 	require.NoError(t, os.WriteFile(blocked, []byte("not a dir"), 0o644))
 
 	var hits atomic.Int32
+
 	c := New(WithClient(newTestClient(t, &hits)), WithPath(filepath.Join(blocked, "systems.json")))
 
 	systems, err := c.Systems(context.Background(), false)
@@ -148,6 +154,7 @@ func TestDefaultPathUsesUserCacheDir(t *testing.T) {
 	t.Setenv("LocalAppData", filepath.Join(tmp, "LocalAppData")) // windows
 
 	var hits atomic.Int32
+
 	c := New(WithClient(newTestClient(t, &hits)))
 
 	_, err := c.Systems(context.Background(), false)

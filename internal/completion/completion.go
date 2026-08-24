@@ -1,7 +1,10 @@
+// Package completion provides dynamic shell completion for the CLI and
+// an installer that wires it into the user's shell rc file.
 package completion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +24,19 @@ const fetchTimeout = 3 * time.Second
 // marker identifies the completion block in rc files, so reinstalls are
 // detected even if the hook line itself changes between versions.
 const marker = "# edgeemu shell completion"
+
+// rc file permissions: private to the user.
+const (
+	rcDirPerm  = 0o750
+	rcFilePerm = 0o600
+)
+
+// ErrUnsupportedShell is returned for shells without completion support.
+var ErrUnsupportedShell = errors.New("unsupported shell")
+
+// ErrShellNotDetected is returned when $SHELL gives no usable shell name.
+var ErrShellNotDetected = errors.New(
+	"cannot detect shell ($SHELL is not set), pass it explicitly: edgeemu install-completion <zsh|bash|fish>")
 
 // Completion provides shell completion values and the installer.
 type Completion struct {
@@ -50,53 +66,103 @@ func New(opts ...Option) *Completion {
 
 // Search completes values for the search command: system IDs after
 // -s/--system (served from cache for instant results), column IDs after
-// -c/--columns, and flag names otherwise.
+// -c/--columns, formats after -f/--format, and flag names otherwise.
 //
 // Flag suggestions are printed by hand instead of via
 // cli.DefaultCompleteWithFlags: the default helper mis-detects the word
 // being completed once a positional argument precedes the flag
 // ("edgeemu search sonic --<TAB>") and suggests subcommands instead.
 func (c *Completion) Search(ctx context.Context, cmd *cli.Command) {
+	switch lastArg() {
+	case "-s", "--system":
+		c.completeSystems(ctx, cmd)
+	case "-c", "--columns":
+		completeValues(cmd, render.ColumnIDs())
+	case "-f", "--format":
+		completeValues(cmd, render.Formats())
+	default:
+		flagSuggestions(cmd)
+	}
+}
+
+// Install appends the completion hook to the shell rc file. The shell is
+// taken from the first argument, falling back to $SHELL.
+func (c *Completion) Install(_ context.Context, cmd *cli.Command) error {
+	shell := detectShell(cmd)
+	if shell == "" {
+		return ErrShellNotDetected
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	rcPath, line, err := rcLine(shell, home)
+	if err != nil {
+		return err
+	}
+
+	out := cmd.Root().Writer
+
+	if data, err := os.ReadFile(rcPath); err == nil && strings.Contains(string(data), marker) {
+		fmt.Fprintf(out, "completion for %s is already installed in %s\n", shell, rcPath)
+
+		return nil
+	}
+
+	if err := appendHook(rcPath, line); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "added to %s:\n\n    %s\n\nrestart your shell or run 'source %s' to enable it\n",
+		rcPath, line, rcPath)
+
+	return nil
+}
+
+// completeSystems prints system IDs, preferring the cache of any age;
+// a cold cache is filled over the network within fetchTimeout.
+func (c *Completion) completeSystems(ctx context.Context, cmd *cli.Command) {
+	if c.cache == nil {
+		return
+	}
+
+	systems := c.cache.Load(0)
+	if systems == nil {
+		fetchCtx, cancel := context.WithTimeout(ctx, fetchTimeout)
+		defer cancel()
+
+		var err error
+
+		systems, err = c.cache.Systems(fetchCtx, false)
+		if err != nil {
+			return
+		}
+	}
+
+	for _, s := range systems {
+		fmt.Fprintln(cmd.Root().Writer, s.ID)
+	}
+}
+
+// lastArg returns the word preceding --generate-shell-completion.
+func lastArg() string {
 	args := os.Args
 	if len(args) > 0 && args[len(args)-1] == "--generate-shell-completion" {
 		args = args[:len(args)-1]
 	}
 
-	last := ""
-	if len(args) > 0 {
-		last = args[len(args)-1]
+	if len(args) == 0 {
+		return ""
 	}
 
-	switch last {
-	case "-s", "--system":
-		if c.cache == nil {
-			return
-		}
+	return args[len(args)-1]
+}
 
-		systems := c.cache.Load(0)
-		if systems == nil {
-			fetchCtx, cancel := context.WithTimeout(ctx, fetchTimeout)
-			defer cancel()
-
-			var err error
-			if systems, err = c.cache.Systems(fetchCtx, false); err != nil {
-				return
-			}
-		}
-
-		for _, s := range systems {
-			fmt.Fprintln(cmd.Root().Writer, s.ID)
-		}
-	case "-c", "--columns":
-		for _, id := range render.ColumnIDs() {
-			fmt.Fprintln(cmd.Root().Writer, id)
-		}
-	case "-f", "--format":
-		for _, f := range []string{"list", "json", "yaml", "xml", "csv"} {
-			fmt.Fprintln(cmd.Root().Writer, f)
-		}
-	default:
-		flagSuggestions(cmd)
+func completeValues(cmd *cli.Command, values []string) {
+	for _, v := range values {
+		fmt.Fprintln(cmd.Root().Writer, v)
 	}
 }
 
@@ -120,11 +186,24 @@ func flagSuggestions(cmd *cli.Command) {
 	}
 }
 
+// detectShell picks the shell from the command argument or $SHELL.
+func detectShell(cmd *cli.Command) string {
+	if shell := cmd.Args().First(); shell != "" {
+		return shell
+	}
+
+	if env := os.Getenv("SHELL"); env != "" {
+		return filepath.Base(env)
+	}
+
+	return ""
+}
+
 // rcLine returns the shell rc file and the line enabling completion for it.
 // The lines are guarded so a missing edgeemu binary (or, for zsh, an
 // uninitialized completion system) skips the hook instead of breaking
 // every shell startup.
-func rcLine(shell, home string) (rcPath, line string, err error) {
+func rcLine(shell, home string) (string, string, error) {
 	switch shell {
 	case "zsh":
 		return filepath.Join(home, ".zshrc"),
@@ -136,57 +215,27 @@ func rcLine(shell, home string) (rcPath, line string, err error) {
 		return filepath.Join(home, ".config", "fish", "config.fish"),
 			"command -q edgeemu; and edgeemu completion fish | source", nil
 	default:
-		return "", "", fmt.Errorf("unsupported shell %q (supported: zsh, bash, fish)", shell)
+		return "", "", fmt.Errorf("%w: %q (supported: zsh, bash, fish)", ErrUnsupportedShell, shell)
 	}
 }
 
-// Install appends the completion hook to the shell rc file. The shell is
-// taken from the first argument, falling back to $SHELL.
-func (c *Completion) Install(ctx context.Context, cmd *cli.Command) error {
-	shell := cmd.Args().First()
-	if shell == "" {
-		if env := os.Getenv("SHELL"); env != "" {
-			shell = filepath.Base(env)
-		}
-	}
-	if shell == "" {
-		return fmt.Errorf("cannot detect shell ($SHELL is not set), pass it explicitly: edgeemu install-completion <zsh|bash|fish>")
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
+// appendHook writes the marker and hook line to the end of rcPath,
+// creating the file and its directory when missing.
+func appendHook(rcPath, line string) error {
+	if err := os.MkdirAll(filepath.Dir(rcPath), rcDirPerm); err != nil {
 		return err
 	}
 
-	rcPath, line, err := rcLine(shell, home)
-	if err != nil {
-		return err
-	}
-
-	if data, err := os.ReadFile(rcPath); err == nil && strings.Contains(string(data), marker) {
-		fmt.Printf("completion for %s is already installed in %s\n", shell, rcPath)
-		return nil
-	}
-
-	if err := os.MkdirAll(filepath.Dir(rcPath), 0o755); err != nil {
-		return err
-	}
-
-	f, err := os.OpenFile(rcPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(rcPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, rcFilePerm)
 	if err != nil {
 		return err
 	}
 
 	if _, err := fmt.Fprintf(f, "\n%s\n%s\n", marker, line); err != nil {
 		_ = f.Close()
+
 		return err
 	}
 
-	if err := f.Close(); err != nil {
-		return err
-	}
-
-	fmt.Printf("added to %s:\n\n    %s\n\nrestart your shell or run 'source %s' to enable it\n", rcPath, line, rcPath)
-
-	return nil
+	return f.Close()
 }

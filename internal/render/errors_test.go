@@ -10,7 +10,9 @@ import (
 // failWriter fails every write, exercising the error paths of renderers.
 type failWriter struct{}
 
-func (failWriter) Write([]byte) (int, error) { return 0, errors.New("boom") }
+var errBoom = errors.New("boom")
+
+func (failWriter) Write([]byte) (int, error) { return 0, errBoom }
 
 func TestRenderersSurfaceWriteErrors(t *testing.T) {
 	p := New(WithWriter(failWriter{}))

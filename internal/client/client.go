@@ -1,3 +1,4 @@
+// Package client implements the HTTP client for edgeemu.net.
 package client
 
 import (
@@ -7,6 +8,9 @@ import (
 )
 
 const defaultBaseURL = "https://edgeemu.net"
+
+// defaultTimeout bounds every request of the default HTTP client.
+const defaultTimeout = 5 * time.Minute
 
 // maxResponseSize caps how much of a response body is read; search pages
 // are a few hundred KB at most, so 20 MiB means something is very wrong.
@@ -39,7 +43,7 @@ func WithHTTPClient(h *http.Client) Option {
 func New(opts ...Option) *Client {
 	c := &Client{
 		baseURL: defaultBaseURL,
-		http:    &http.Client{Timeout: 5 * time.Minute},
+		http:    &http.Client{Timeout: defaultTimeout},
 	}
 
 	for _, opt := range opts {

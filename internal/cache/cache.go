@@ -1,3 +1,5 @@
+// Package cache persists the systems list between runs so shell
+// completion and repeated commands answer instantly.
 package cache
 
 import (
@@ -14,6 +16,15 @@ import (
 
 // TTL is how long a cached systems list is considered fresh by default.
 const TTL = 24 * time.Hour
+
+// cache file permissions: private to the user.
+const (
+	cacheDirPerm  = 0o750
+	cacheFilePerm = 0o600
+)
+
+// ErrNoClient is returned on a cache miss when no client is configured.
+var ErrNoClient = errors.New("cache: no client configured to fetch systems")
 
 // Cache stores the systems list on disk between runs.
 type Cache struct {
@@ -58,19 +69,6 @@ type systemsCache struct {
 	Systems   []ds.System `json:"systems"`
 }
 
-func (c *Cache) filePath() (string, error) {
-	if c.path != "" {
-		return c.path, nil
-	}
-
-	dir, err := os.UserCacheDir()
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(dir, "edgeemu", "systems.json"), nil
-}
-
 // Load returns the cached systems list, or nil if there is no usable
 // cache. A maxAge of 0 accepts a cache of any age.
 func (c *Cache) Load(maxAge time.Duration) []ds.System {
@@ -96,13 +94,49 @@ func (c *Cache) Load(maxAge time.Duration) []ds.System {
 	return sc.Systems
 }
 
+// Systems returns the systems list, preferring a fresh cache over the
+// network. With refresh, the cache is bypassed and rewritten.
+func (c *Cache) Systems(ctx context.Context, refresh bool) ([]ds.System, error) {
+	if !refresh {
+		if systems := c.Load(c.ttl); systems != nil {
+			return systems, nil
+		}
+	}
+
+	if c.edge == nil {
+		return nil, ErrNoClient
+	}
+
+	systems, err := c.edge.Systems(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c.store(systems)
+
+	return systems, nil
+}
+
+func (c *Cache) filePath() (string, error) {
+	if c.path != "" {
+		return c.path, nil
+	}
+
+	dir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, "edgeemu", "systems.json"), nil
+}
+
 func (c *Cache) store(systems []ds.System) {
 	p, err := c.filePath()
 	if err != nil {
 		return
 	}
 
-	if os.MkdirAll(filepath.Dir(p), 0o755) != nil {
+	if os.MkdirAll(filepath.Dir(p), cacheDirPerm) != nil {
 		return
 	}
 
@@ -121,38 +155,17 @@ func (c *Cache) store(systems []ds.System) {
 	if _, err := tmp.Write(data); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
+
 		return
 	}
 
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmp.Name())
+
 		return
 	}
 
-	if os.Chmod(tmp.Name(), 0o644) != nil || os.Rename(tmp.Name(), p) != nil {
+	if os.Chmod(tmp.Name(), cacheFilePerm) != nil || os.Rename(tmp.Name(), p) != nil {
 		_ = os.Remove(tmp.Name())
 	}
-}
-
-// Systems returns the systems list, preferring a fresh cache over the
-// network. With refresh, the cache is bypassed and rewritten.
-func (c *Cache) Systems(ctx context.Context, refresh bool) ([]ds.System, error) {
-	if !refresh {
-		if systems := c.Load(c.ttl); systems != nil {
-			return systems, nil
-		}
-	}
-
-	if c.edge == nil {
-		return nil, errors.New("cache: no client configured to fetch systems")
-	}
-
-	systems, err := c.edge.Systems(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	c.store(systems)
-
-	return systems, nil
 }

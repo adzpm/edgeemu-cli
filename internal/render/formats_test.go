@@ -16,8 +16,14 @@ import (
 )
 
 var testROMs = []ds.ROM{
-	{Name: "Sonic & Knuckles (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/1.zip", Size: "1.36m", UnpackedSize: "256.00k", Downloads: 341, Hash: "4DCFD55C 0658F691"},
-	{Name: "Sonic The Hedgehog 2 (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/2.zip", Size: "732.08k", UnpackedSize: "1.00m", Downloads: 432, Hash: "24AB4C3A"},
+	{
+		Name: "Sonic & Knuckles (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/1.zip",
+		Size: "1.36m", UnpackedSize: "256.00k", Downloads: 341, Hash: "4DCFD55C 0658F691",
+	},
+	{
+		Name: "Sonic The Hedgehog 2 (World)", System: "Sega Mega Drive / Genesis", URL: "https://example.com/2.zip",
+		Size: "732.08k", UnpackedSize: "1.00m", Downloads: 432, Hash: "24AB4C3A",
+	},
 }
 
 var testSystems = []ds.System{
@@ -27,9 +33,11 @@ var testSystems = []ds.System{
 
 func TestJSONROMs(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).JSONROMs(testROMs, []string{"name", "dls"}))
 
 	var got []map[string]any
+
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
 
 	require.Len(t, got, 2)
@@ -41,6 +49,7 @@ func TestJSONROMs(t *testing.T) {
 
 func TestJSONROMsEmptyIsArray(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).JSONROMs(nil, []string{"name"}))
 
 	assert.Equal(t, "[]", strings.TrimSpace(buf.String()))
@@ -48,9 +57,11 @@ func TestJSONROMsEmptyIsArray(t *testing.T) {
 
 func TestYAMLROMs(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).YAMLROMs(testROMs, []string{"name", "size", "dls"}))
 
 	var got []map[string]any
+
 	require.NoError(t, yaml.Unmarshal(buf.Bytes(), &got))
 
 	require.Len(t, got, 2)
@@ -63,6 +74,7 @@ func TestYAMLROMs(t *testing.T) {
 
 func TestXMLROMs(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).XMLROMs(testROMs, []string{"name", "url"}))
 	out := buf.String()
 
@@ -72,6 +84,7 @@ func TestXMLROMs(t *testing.T) {
 			URL  string `xml:"url"`
 		} `xml:"rom"`
 	}
+
 	require.NoError(t, xml.Unmarshal(buf.Bytes(), &doc), "invalid XML:\n%s", out)
 
 	require.Len(t, doc.ROMs, 2)
@@ -82,17 +95,20 @@ func TestXMLROMs(t *testing.T) {
 
 func TestXMLSystems(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).XMLSystems(testSystems))
 
 	var doc struct {
 		Systems []ds.System `xml:"system"`
 	}
+
 	require.NoError(t, xml.Unmarshal(buf.Bytes(), &doc))
 	assert.Equal(t, testSystems, doc.Systems)
 }
 
 func TestCSVROMs(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).CSVROMs(testROMs, []string{"name", "dls"}))
 
 	rows, err := csv.NewReader(&buf).ReadAll()
@@ -106,6 +122,7 @@ func TestCSVROMs(t *testing.T) {
 
 func TestCSVROMsEmptyHasHeader(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).CSVROMs(nil, []string{"name", "url"}))
 
 	assert.Equal(t, "name,url", strings.TrimSpace(buf.String()))
@@ -113,6 +130,7 @@ func TestCSVROMsEmptyHasHeader(t *testing.T) {
 
 func TestCSVSystems(t *testing.T) {
 	var buf bytes.Buffer
+
 	require.NoError(t, New(WithWriter(&buf)).CSVSystems(testSystems))
 
 	rows, err := csv.NewReader(&buf).ReadAll()
@@ -134,22 +152,28 @@ func TestStructuredFormatsRejectUnknownColumn(t *testing.T) {
 
 func TestJSONAndYAMLGeneric(t *testing.T) {
 	var buf bytes.Buffer
+
 	p := New(WithWriter(&buf))
 
 	require.NoError(t, p.JSON(testSystems))
+
 	var js []ds.System
+
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &js))
 	assert.Equal(t, testSystems, js)
 
 	buf.Reset()
 	require.NoError(t, p.YAML(testSystems))
+
 	var ys []ds.System
+
 	require.NoError(t, yaml.Unmarshal(buf.Bytes(), &ys))
 	assert.Equal(t, testSystems, ys)
 }
 
 func TestWriterExposesDestination(t *testing.T) {
 	var buf bytes.Buffer
+
 	assert.Same(t, any(&buf), any(New(WithWriter(&buf)).Writer()))
 }
 
