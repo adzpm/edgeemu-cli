@@ -85,6 +85,25 @@ func TestPrintROMsMinimalColumns(t *testing.T) {
 	assert.NotContains(t, out, "size:", "unselected fields must not appear")
 }
 
+func TestPrintROMsCompactZeroPadded(t *testing.T) {
+	roms := make([]ds.ROM, 0, 10)
+	for range 10 {
+		roms = append(roms, ds.ROM{Name: "Sonic", Size: "1m"})
+	}
+
+	var buf bytes.Buffer
+
+	require.NoError(t, New(WithWriter(&buf)).PrintROMs(roms, []string{"name", "size"}))
+	out := buf.String()
+
+	assert.NotContains(t, out, "\n\n", "entries must not be separated by blank lines")
+
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	require.Len(t, lines, 20, "two lines per entry, nothing more")
+	assert.Equal(t, "01. Sonic", lines[0], "indexes must be zero-padded to the total's width")
+	assert.Equal(t, "10. Sonic", lines[18])
+}
+
 func TestPrintROMsUnknownColumn(t *testing.T) {
 	var buf bytes.Buffer
 
@@ -105,6 +124,24 @@ func TestPrintSystemsAligned(t *testing.T) {
 	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
 	require.Len(t, lines, 2)
 
-	assert.Equal(t, "atari-2600    Atari 2600", lines[0])
-	assert.Equal(t, "sega-genesis  Sega Mega Drive / Genesis", lines[1])
+	assert.Equal(t, "1. Atari 2600                · id: atari-2600", lines[0],
+		"names must be padded to the longest one")
+	assert.Equal(t, "2. Sega Mega Drive / Genesis · id: sega-genesis", lines[1])
+}
+
+func TestPrintSystemsZeroPadsIndexes(t *testing.T) {
+	systems := make([]ds.System, 0, 10)
+	for range 10 {
+		systems = append(systems, ds.System{ID: "atari-2600", Name: "Atari 2600"})
+	}
+
+	var buf bytes.Buffer
+
+	require.NoError(t, New(WithWriter(&buf)).PrintSystems(systems))
+
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+	require.Len(t, lines, 10)
+
+	assert.True(t, strings.HasPrefix(lines[0], "01. "), "indexes must be zero-padded to the total's width")
+	assert.True(t, strings.HasPrefix(lines[9], "10. "))
 }
