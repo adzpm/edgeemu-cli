@@ -4,6 +4,7 @@ package app
 
 import (
 	"strings"
+	"time"
 
 	"github.com/urfave/cli/v3"
 
@@ -12,6 +13,9 @@ import (
 	"github.com/adzpm/edgeemu-cli/internal/completion"
 	"github.com/adzpm/edgeemu-cli/internal/render"
 )
+
+// defaultDumpDelay is the polite pause between dump requests.
+const defaultDumpDelay = 150 * time.Millisecond
 
 var (
 	systemFlag = &cli.StringFlag{
@@ -44,6 +48,13 @@ var (
 		Name:    "refresh",
 		Aliases: []string{"r"},
 		Usage:   "bypass the cache and refetch",
+	}
+
+	delayFlag = &cli.DurationFlag{
+		Name:    "delay",
+		Aliases: []string{"d"},
+		Value:   defaultDumpDelay,
+		Usage:   "pause between requests while dumping (be polite to the site)",
 	}
 )
 
@@ -132,6 +143,18 @@ func (a *App) Root() *cli.Command {
 				},
 				ShellComplete: a.comp.Search,
 				Action:        a.Search,
+			},
+			{
+				Name:  "dump",
+				Usage: "dump the full ROM index of the site (or one system)",
+				Flags: []cli.Flag{
+					systemFlag,
+					formatFlag,
+					columnsFlag,
+					delayFlag,
+				},
+				ShellComplete: a.comp.Search,
+				Action:        a.Dump,
 			},
 			{
 				Name:   "systems",

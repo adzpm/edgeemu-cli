@@ -114,6 +114,21 @@ The same IDs are suggested by shell completion after `-f`.
 > Note: the site returns at most 100 results per query. If you hit exactly 100,
 > narrow the query or search within a specific system via `-s`.
 
+### Dump
+
+Export the full ROM index — either the whole site or one system:
+
+```sh
+edgeemu dump -s sega-genesis -f csv > genesis.csv     # one system
+edgeemu dump -f json > edgeemu.json                   # everything (~50 systems, takes a while)
+edgeemu dump -s sega-genesis -c name,hash -f csv      # -c works here too
+```
+
+Unlike `search`, `dump` is not subject to the 100-result cap: it walks the site's public per-letter browse pages
+(`/browse/<system>/<letter>`), which list every entry. Progress is reported on stderr, so redirecting stdout captures
+only the data. Between requests the tool pauses (`--delay`, default 150ms) to stay polite to the site; a full dump
+makes ~27 requests per system.
+
 ### Systems
 
 ```sh
@@ -152,21 +167,23 @@ task --list       # everything else
 
 ## Commands
 
-| Command                      | Aliases | Description              |
-|------------------------------|---------|--------------------------|
-| `search <query>`             | `s`     | Search for ROMs          |
-| `systems`                    |         | List available systems   |
-| `install-completion [shell]` |         | Install shell completion |
+| Command                      | Aliases | Description                       |
+|------------------------------|---------|-----------------------------------|
+| `search <query>`             | `s`     | Search for ROMs                   |
+| `dump`                       |         | Dump the full ROM index           |
+| `systems`                    |         | List available systems            |
+| `install-completion [shell]` |         | Install shell completion          |
 
 ## Flags
 
-| Flag            | Commands        | Description                                 |
-|-----------------|-----------------|---------------------------------------------|
-| `-s, --system`  | search          | System to search in (default: all)          |
-| `-l, --limit`   | search          | Max results to show                         |
-| `-c, --columns` | search          | Fields to show, see [Columns](#columns)     |
-| `-f, --format`  | search, systems | Output format, see [Formats](#formats)      |
-| `-r, --refresh` | systems         | Bypass the cache and refetch                |
+| Flag            | Commands              | Description                             |
+|-----------------|-----------------------|-----------------------------------------|
+| `-s, --system`  | search, dump          | System to use (default: all)            |
+| `-l, --limit`   | search                | Max results to show                     |
+| `-c, --columns` | search, dump          | Fields to show, see [Columns](#columns) |
+| `-f, --format`  | search, dump, systems | Output format, see [Formats](#formats)  |
+| `-d, --delay`   | dump                  | Pause between requests (default: 150ms) |
+| `-r, --refresh` | systems               | Bypass the cache and refetch            |
 
 ## Disclaimer
 
