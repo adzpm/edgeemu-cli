@@ -53,7 +53,7 @@ func TestBrowse(t *testing.T) {
 
 	first := roms[0]
 	assert.Equal(t, "Sonic & Knuckles (World)", first.Name, "entities must be unescaped")
-	assert.Equal(t, c.baseURL+"/download/sega-genesis/Sonic%20%26%20Knuckles%20%28World%29.zip", first.URL)
+	assert.Equal(t, c.baseURL+"/download/demo-system/Game%20One%20%28Demo%29%20%26%20Co.zip", first.URL)
 	assert.Equal(t, "1.36m", first.Size)
 	assert.Equal(t, 341, first.Downloads)
 	assert.Equal(t, "256.00k", first.UnpackedSize)
