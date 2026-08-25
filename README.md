@@ -82,7 +82,7 @@ All fields available for `-c/--columns`, in their display order:
 | `unpacked` | Unpacked ROM size                  | `512.00k`                                  |
 | `dls`      | Download counter                   | `588`                                      |
 | `hash`     | CRC hash of the ROM                | `F9394E97`                                 |
-| `url`      | Direct download link               | `https://edgeemu.net/download/…/….zip`     |
+| `url`      | Direct download link               | `https://edgeemu.net/[...]/[...].zip`      |
 
 ```sh
 edgeemu search sonic -c name,hash             # just names and hashes
