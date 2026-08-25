@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -76,11 +75,15 @@ func (a *App) dumpSystems(ctx context.Context, selector string) ([]ds.System, er
 func (a *App) crawl(ctx context.Context, systems []ds.System, delay time.Duration) ([]ds.ROM, error) {
 	var all []ds.ROM
 
+	prog := newProgress(systems)
+
 	for _, sys := range systems {
 		letters, err := a.edge.BrowseLetters(ctx, sys.ID)
 		if err != nil {
 			return nil, err
 		}
+
+		prog.system(len(letters))
 
 		count := 0
 
@@ -98,14 +101,14 @@ func (a *App) crawl(ctx context.Context, systems []ds.System, delay time.Duratio
 			all = append(all, roms...)
 			count += len(roms)
 
-			fmt.Fprintf(os.Stderr, "\r%-35s %s (%d entries, %d total)   ", sys.ID, letter, count, len(all))
+			prog.step(sys.ID, letter, count)
 
 			if err := pause(ctx, delay); err != nil {
 				return nil, err
 			}
 		}
 
-		fmt.Fprintln(os.Stderr)
+		prog.finish(sys.ID, count)
 	}
 
 	return all, nil
