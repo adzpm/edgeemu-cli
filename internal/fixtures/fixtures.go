@@ -21,3 +21,21 @@ var EmptyPage string
 //
 //go:embed systems.html
 var SystemsPage string
+
+// BrowseLettersPage is a /browse/sega-genesis page with two letter
+// buckets (q and s) plus the "-" placeholder parsers must skip.
+//
+//go:embed browse_letters.html
+var BrowseLettersPage string
+
+// BrowseQPage is the letter-q bucket with one item, using the browse
+// markup: no "system:" line and an &nbsp; after the hash label.
+//
+//go:embed browse_q.html
+var BrowseQPage string
+
+// BrowseSPage is the letter-s bucket with two items, one containing
+// HTML entities and a multi-word hash.
+//
+//go:embed browse_s.html
+var BrowseSPage string

@@ -88,7 +88,7 @@ func TestSearchDefaultsToListWithAllFields(t *testing.T) {
 	assert.Contains(t, out, "1. Sonic & Knuckles (World)")
 	assert.Contains(t, out, "2. Sonic The Hedgehog (USA, Europe)")
 	// The full URL must be present, untruncated, on its own line.
-	assert.Contains(t, out, "/download/sega-genesis/Sonic%20%26%20Knuckles%20%28World%29.zip")
+	assert.Contains(t, out, "/download/demo-system/Game%20One%20%28Demo%29%20%26%20Co.zip")
 	// Every field is shown by default, explicitly.
 	assert.Contains(t, out, "system: Sega Mega Drive / Genesis")
 	assert.Contains(t, out, "size: 1.36m")

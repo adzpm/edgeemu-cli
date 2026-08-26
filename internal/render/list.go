@@ -52,12 +52,6 @@ func (p *Printer) PrintROMs(roms []ds.ROM, columnIDs []string) error {
 	layout := newListLayout(cols, len(roms))
 
 	for i, r := range roms {
-		if i > 0 {
-			if _, err := fmt.Fprintln(p.w); err != nil {
-				return err
-			}
-		}
-
 		if err := p.printROMEntry(layout, i, r); err != nil {
 			return err
 		}
@@ -73,7 +67,7 @@ func (p *Printer) printROMEntry(l listLayout, i int, r ds.ROM) error {
 		head = r.Name
 	}
 
-	if _, err := fmt.Fprintf(p.w, "%*d. %s\n", l.numW, i+1, head); err != nil {
+	if _, err := fmt.Fprintf(p.w, "%0*d. %s\n", l.numW, i+1, head); err != nil {
 		return err
 	}
 
@@ -97,18 +91,21 @@ func (p *Printer) printROMEntry(l listLayout, i int, r ds.ROM) error {
 	return nil
 }
 
-// PrintSystems renders the systems list as aligned "id  name" lines.
+// PrintSystems renders the systems list as numbered, aligned lines:
+//
+//  01. Sega 32X    · id: sega-32x
 func (p *Printer) PrintSystems(systems []ds.System) error {
-	idW := 0
+	numW := len(strconv.Itoa(len(systems)))
 
+	nameW := 0
 	for _, s := range systems {
-		if len(s.ID) > idW {
-			idW = len(s.ID)
+		if len(s.Name) > nameW {
+			nameW = len(s.Name)
 		}
 	}
 
-	for _, s := range systems {
-		if _, err := fmt.Fprintf(p.w, "%-*s  %s\n", idW, s.ID, s.Name); err != nil {
+	for i, s := range systems {
+		if _, err := fmt.Fprintf(p.w, "%0*d. %-*s · id: %s\n", numW, i+1, nameW, s.Name, s.ID); err != nil {
 			return err
 		}
 	}

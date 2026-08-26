@@ -12,7 +12,7 @@ func TestROMJSONTags(t *testing.T) {
 	rom := ROM{
 		Name:         "Sonic The Hedgehog (USA, Europe)",
 		System:       "Sega Mega Drive / Genesis",
-		URL:          "https://edgeemu.net/download/sega-genesis/x.zip",
+		URL:          "https://example.com/roms/x.zip",
 		Size:         "377.87k",
 		UnpackedSize: "512.00k",
 		Downloads:    588,

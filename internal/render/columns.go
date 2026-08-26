@@ -22,6 +22,13 @@ const (
 // ErrUnknownColumn is returned for a -c value outside ColumnIDs.
 var ErrUnknownColumn = errors.New("unknown column")
 
+// ValidateColumns reports whether every requested column ID exists.
+func ValidateColumns(ids []string) error {
+	_, err := selectColumns(ids)
+
+	return err
+}
+
 // romColumn is a selectable field of the search results output.
 type romColumn struct {
 	id    string
