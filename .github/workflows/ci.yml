@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 # Tool versions are pinned; actions are pinned to commit SHAs

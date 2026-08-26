@@ -7,72 +7,223 @@
 [![go version](https://img.shields.io/github/go-mod/go-version/adzpm/edgeemu-cli)](go.mod)
 [![license](https://img.shields.io/github/license/adzpm/edgeemu-cli)](LICENSE)
 
-CLI for searching ROMs on [edgeemu.net](https://edgeemu.net).
+A fast command-line tool for searching the ROM catalog of [edgeemu.net](https://edgeemu.net):
+find games, filter by console, export the index to JSON/YAML/XML/CSV.
 
 > **Note:** edgeemu-cli only finds and shows information — what you do with the links is entirely up to you.
 > See the [disclaimer](#disclaimer).
 
-## Install
+---
 
-Homebrew (macOS / Linux):
+## Table of contents
+
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Commands](#commands)
+  - [`search` — find ROMs](#search--find-roms)
+  - [`systems` — list consoles](#systems--list-consoles)
+  - [`dump` — export the full index](#dump--export-the-full-index)
+  - [`install-completion` — enable Tab hints](#install-completion--enable-tab-hints)
+- [Reference](#reference)
+  - [Flags](#flags)
+  - [Columns](#columns)
+  - [Formats](#formats)
+- [FAQ](#faq)
+- [Development](#development)
+- [Disclaimer](#disclaimer)
+
+---
+
+## Installation
+
+Pick whichever way suits you — all of them install the same `edgeemu` binary.
+
+**Homebrew** (macOS / Linux, recommended):
 
 ```sh
 brew install adzpm/tap/edgeemu
 ```
 
-Debian / Ubuntu — grab the `.deb` from the [latest release](https://github.com/adzpm/edgeemu-cli/releases/latest):
+**Debian / Ubuntu** — download the `.deb` from the [latest release](https://github.com/adzpm/edgeemu-cli/releases/latest), then:
 
 ```sh
 sudo dpkg -i edgeemu_*_linux_amd64.deb
 ```
 
-Go:
+**Go** (any OS with a Go toolchain):
 
 ```sh
 go install github.com/adzpm/edgeemu-cli/cmd/edgeemu@latest
 ```
 
-Or build from source:
+**Prebuilt binaries** for macOS, Linux and Windows (amd64/arm64) are attached to every
+[release](https://github.com/adzpm/edgeemu-cli/releases). To build from source: `go build -o edgeemu ./cmd/edgeemu`.
+
+Check that it works:
 
 ```sh
-go build -o edgeemu ./cmd/edgeemu
+edgeemu --version
 ```
 
-Prebuilt binaries for macOS, Linux and Windows (amd64/arm64) are attached to
-every [release](https://github.com/adzpm/edgeemu-cli/releases).
+---
 
-## Usage
+## Quick start
 
-### Search
+Three commands cover 90% of everyday use.
+
+**1. Find a game** (searches every console at once):
 
 ```sh
-edgeemu search sonic                          # search all systems
-edgeemu search sonic -s sega-genesis          # search a specific system
-edgeemu search sonic -l 10                    # limit results
-edgeemu search sonic -c name,size,dls,url     # pick fields to show
-edgeemu search sonic -f json                  # machine-readable output, see Formats below
+edgeemu search "chrono trigger"
 ```
 
-The default `list` format never truncates anything, and download URLs sit alone on their own line so the terminal always
-keeps them clickable:
-
 ```
-1. Sonic The Hedgehog (USA, Europe)
-   system: Sega Mega Drive / Genesis · size: 377.87k · unpacked: 512.00k · dls: 588 · hash: F9394E97
-   https://edgeemu.net/[...]/sega-genesis/[...].zip
-
-2. Sonic The Hedgehog 2 (World)
-   system: Sega Mega Drive / Genesis · size: 732.08k · unpacked: 1.00m · dls: 432 · hash: 24AB4C3A
-   https://edgeemu.net/[...]/sega-genesis/[...].zip
+1. Chrono Trigger (USA)
+   system: Super NES (SNES) · size: 2.93m · unpacked: 4.00m · dls: 1018 · hash: 2D206BF7
+   https://edgeemu.net/[...]/[...].zip
+2. Chrono Trigger (Japan)
+   ...
 ```
 
-Every field is shown by default. Use `-c` to narrow the output to specific fields (see [Columns](#columns) below).
-The selection applies to every output format — in `json`, `yaml`, `xml` and `csv` the field IDs are used as keys
-(or the header row), and only the selected fields are encoded.
+**2. See which consoles exist** (their IDs go into the `-s` flag):
+
+```sh
+edgeemu systems
+```
+
+```
+01. Atari 2600                          · id: atari-2600
+02. Atari 5200                          · id: atari-5200
+...
+48. Watara Supervision                  · id: watara-supervision
+```
+
+**3. Search one console only:**
+
+```sh
+edgeemu search sonic -s sega-genesis
+```
+
+That's it. Everything else — output formats, field selection, full exports — is described below.
+
+---
+
+## Commands
+
+### `search` — find ROMs
+
+```
+edgeemu search [flags] <query>
+```
+
+Searches the site and prints what it finds. The words of the query can go anywhere in the title.
+
+| Flag | What it does | Default |
+|------|--------------|---------|
+| `-s, --system` | Search one console only ([IDs](#systems--list-consoles)) | all consoles |
+| `-l, --limit`  | Show at most N results | all |
+| `-c, --columns` | Show only these [fields](#columns) | all fields |
+| `-f, --format`  | Output [format](#formats) | `list` |
+
+Examples:
+
+```sh
+edgeemu search sonic -s sega-genesis -l 5     # top 5 Sonic games on Genesis
+edgeemu search sonic -c name,hash             # names and hashes only
+edgeemu search sonic -f json                  # JSON for scripts
+```
+
+> The site returns **at most 100 results per query**. If you hit exactly 100, narrow the query,
+> add `-s`, or use [`dump`](#dump--export-the-full-index) — it has no such cap.
+
+### `systems` — list consoles
+
+```
+edgeemu systems [flags]
+```
+
+Prints every console the site knows, with the ID you pass to `-s`:
+
+```
+01. Atari 2600                          · id: atari-2600
+02. Atari 5200                          · id: atari-5200
+...
+```
+
+| Flag | What it does | Default |
+|------|--------------|---------|
+| `-f, --format`  | Output [format](#formats) | `list` |
+| `-r, --refresh` | Re-download the list instead of using the cache | off |
+
+The list changes rarely, so it is cached for 24 hours
+(`~/Library/Caches/edgeemu` on macOS, `~/.cache/edgeemu` on Linux). The cache also powers instant Tab completion.
+
+### `dump` — export the full index
+
+```
+edgeemu dump [flags]
+```
+
+Exports the **entire** catalog — every game of every console (or just one via `-s`) — in one file:
+
+```sh
+edgeemu dump -s sega-genesis -f csv > genesis.csv     # one console (~4 seconds)
+edgeemu dump -f json > edgeemu.json                   # the whole site (~50 consoles, takes minutes)
+```
+
+| Flag | What it does | Default |
+|------|--------------|---------|
+| `-s, --system` | Dump one console only | all consoles |
+| `-c, --columns` | Export only these [fields](#columns) | all fields |
+| `-f, --format`  | Output [format](#formats) | `list` |
+| `-d, --delay`   | Pause between requests, to stay polite to the site | `150ms` |
+
+While it runs, a progress bar per console is drawn on stderr — so `> file.json` captures only the data:
+
+```
+[09/48] colecovision         [████████████████████████] 100% · ✓ · 197 entries
+[10/48] commodore-64         [██████████░░░░░░░░░░░░░░]  40% · h · 1502 entries
+```
+
+How it works: unlike `search`, `dump` walks the site's public per-letter browse pages
+(`/browse/<system>/<letter>`), which are not capped at 100 entries. A full dump makes ~27 requests per console.
+
+### `install-completion` — enable Tab hints
+
+```
+edgeemu install-completion [zsh|bash|fish]
+```
+
+One-time setup: adds a completion hook to your shell config (detects the shell from `$SHELL` if not named).
+Restart the terminal afterwards. Then the Tab key completes:
+
+- commands and flags,
+- console IDs after `-s` (instantly, from the cache),
+- field IDs after `-c` and formats after `-f`.
+
+Running it twice is safe — it detects an existing install. To print the raw completion script instead,
+use `edgeemu completion <shell>`.
+
+---
+
+## Reference
+
+### Flags
+
+All flags at a glance:
+
+| Flag            | Commands              | Description                             |
+|-----------------|-----------------------|-----------------------------------------|
+| `-s, --system`  | search, dump          | Console to use (default: all)           |
+| `-l, --limit`   | search                | Max results to show                     |
+| `-c, --columns` | search, dump          | Fields to show, see [Columns](#columns) |
+| `-f, --format`  | search, dump, systems | Output format, see [Formats](#formats)  |
+| `-d, --delay`   | dump                  | Pause between requests (default: 150ms) |
+| `-r, --refresh` | systems               | Bypass the cache and refetch            |
 
 ### Columns
 
-All fields available for `-c/--columns`, in their display order:
+Fields available for `-c/--columns`, in their display order:
 
 | ID         | Description                        | Example                                    |
 |------------|------------------------------------|--------------------------------------------|
@@ -84,16 +235,18 @@ All fields available for `-c/--columns`, in their display order:
 | `hash`     | CRC hash of the ROM                | `F9394E97`                                 |
 | `url`      | Direct download link               | `https://edgeemu.net/[...]/[...].zip`      |
 
+Every field is shown by default; `-c` narrows the set. The selection applies to **every** output format:
+in `json`, `yaml`, `xml` and `csv` the field IDs become the keys (or the CSV header), and only the
+selected fields are encoded.
+
 ```sh
 edgeemu search sonic -c name,hash             # just names and hashes
 edgeemu search sonic -c url -f csv            # a plain list of links
 ```
 
-The same IDs are suggested by shell completion after `-c`.
-
 ### Formats
 
-All values available for `-f/--format`, for both `search` and `systems`:
+Values for `-f/--format`, accepted by `search`, `dump` and `systems`:
 
 | ID     | Description                                                                             |
 |--------|-----------------------------------------------------------------------------------------|
@@ -108,54 +261,35 @@ edgeemu search sonic -f json -c name,dls      # [{"name": "...", "dls": 588}, ..
 edgeemu systems -f yaml                       # - id: atari-2600 ...
 ```
 
-An empty search result encodes as an empty list (`[]`, `<roms></roms>`, or a lone CSV header), never as `null`.
-The same IDs are suggested by shell completion after `-f`.
+An empty result encodes as an empty list (`[]`, `<roms></roms>`, or a lone CSV header) — never as `null`.
 
-> Note: the site returns at most 100 results per query. If you hit exactly 100,
-> narrow the query or search within a specific system via `-s`.
+---
 
-### Dump
+## FAQ
 
-Export the full ROM index — either the whole site or one system:
+**Why do I get exactly 100 results?**
+That is the site's own cap on search. Narrow the query, limit it to one console with `-s`,
+or use `dump` — it reads the browse pages, which have no cap.
 
-```sh
-edgeemu dump -s sega-genesis -f csv > genesis.csv     # one system
-edgeemu dump -f json > edgeemu.json                   # everything (~50 systems, takes a while)
-edgeemu dump -s sega-genesis -c name,hash -f csv      # -c works here too
-```
+**Why is the first Tab completion after `-s` slow?**
+The console list is fetched once and cached for 24 hours. The first completion fills the cache
+(up to 3 seconds); every one after that is instant.
 
-Unlike `search`, `dump` is not subject to the 100-result cap: it walks the site's public per-letter browse pages
-(`/browse/<system>/<letter>`), which list every entry. Progress is reported on stderr, so redirecting stdout captures
-only the data. Between requests the tool pauses (`--delay`, default 150ms) to stay polite to the site; a full dump
-makes ~27 requests per system.
+**Can this download ROMs?**
+No. There is no download command, on purpose — see the [disclaimer](#disclaimer).
+The `url` field is plain text; opening it is your own call.
 
-### Systems
+**A full dump is slow. Can I speed it up?**
+The pauses are deliberate politeness towards the site (`-d 150ms` by default). You can lower them
+(`-d 50ms`), but please don't hammer the site — the data doesn't change that often.
 
-```sh
-edgeemu systems            # list all system IDs for the -s flag
-edgeemu systems -f json    # machine-readable output, see Formats above
-edgeemu systems -r         # refresh the cached list
-```
-
-The list is cached for 24 hours in the user cache directory (`~/Library/Caches/edgeemu` on macOS, `~/.cache/edgeemu` on
-Linux).
-
-### Shell completion
-
-```sh
-edgeemu install-completion           # detects your shell from $SHELL
-edgeemu install-completion zsh       # or name it explicitly (zsh, bash, fish)
-```
-
-Adds a completion hook to your shell rc file. Completes commands, flags, system IDs after `-s` (instantly, from the
-cache), field IDs after `-c` and formats after `-f`. To print the raw completion script instead, use
-`edgeemu completion <shell>`.
+---
 
 ## Development
 
-Common tasks are defined in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint goreleaser`). CI
-runs with pinned tool versions — task 3.53.1, golangci-lint 2.13.1, goreleaser 2.18.0 (see the workflow `env`
-blocks); keep local tools reasonably close to those.
+Common tasks live in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint goreleaser`). CI runs
+with pinned tool versions — task 3.53.1, golangci-lint 2.13.1, goreleaser 2.18.0 (see the workflow `env` blocks); keep
+local tools reasonably close to those.
 
 ```sh
 task build        # build with the version stamped from git
@@ -165,25 +299,11 @@ task snapshot     # local goreleaser dry run
 task --list       # everything else
 ```
 
-## Commands
+Project layout: `cmd/edgeemu` is the entry point; everything else is in `internal/`
+(`client` — HTTP + parsing, `cache` — systems cache, `render` — output formats, `completion` — shell
+completion, `app` — CLI wiring).
 
-| Command                      | Aliases | Description                       |
-|------------------------------|---------|-----------------------------------|
-| `search <query>`             | `s`     | Search for ROMs                   |
-| `dump`                       |         | Dump the full ROM index           |
-| `systems`                    |         | List available systems            |
-| `install-completion [shell]` |         | Install shell completion          |
-
-## Flags
-
-| Flag            | Commands              | Description                             |
-|-----------------|-----------------------|-----------------------------------------|
-| `-s, --system`  | search, dump          | System to use (default: all)            |
-| `-l, --limit`   | search                | Max results to show                     |
-| `-c, --columns` | search, dump          | Fields to show, see [Columns](#columns) |
-| `-f, --format`  | search, dump, systems | Output format, see [Formats](#formats)  |
-| `-d, --delay`   | dump                  | Pause between requests (default: 150ms) |
-| `-r, --refresh` | systems               | Bypass the cache and refetch            |
+---
 
 ## Disclaimer
 
@@ -200,3 +320,7 @@ the site's terms, and whether you own the original media. That decision, and the
 yours — the same as with any search engine result.
 
 This project is not affiliated with edgeemu.net or any console manufacturer.
+
+## License
+
+[MIT](LICENSE)
