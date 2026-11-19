@@ -95,6 +95,17 @@ func TestLoadMissingAndCorrupt(t *testing.T) {
 	assert.Nil(t, c.Load(0), "corrupt cache file must load as nil")
 }
 
+func TestLoadEmptyListIsNotACache(t *testing.T) {
+	p := cachePath(t)
+	c := New(WithPath(p))
+
+	data, err := json.Marshal(systemsCache{FetchedAt: time.Now(), Systems: []ds.System{}})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(p, data, 0o644))
+
+	assert.Nil(t, c.Load(0), "an empty cached list must be refetched, not served")
+}
+
 func TestCustomTTL(t *testing.T) {
 	var hits atomic.Int32
 

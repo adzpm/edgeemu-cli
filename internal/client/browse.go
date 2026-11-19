@@ -53,7 +53,9 @@ func (c *Client) BrowseLetters(ctx context.Context, system string) ([]string, er
 // pages are not capped at 100 entries like the search is. The System
 // field is left empty: the browse page does not repeat it.
 func (c *Client) Browse(ctx context.Context, system, letter string) ([]ds.ROM, error) {
-	body, err := c.get(ctx, "/browse/"+system+"/"+letter)
+	path := "/browse/" + system + "/" + letter
+
+	body, err := c.get(ctx, path)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +73,10 @@ func (c *Client) Browse(ctx context.Context, system, letter string) ([]ds.ROM, e
 			UnpackedSize: strings.TrimSpace(m[5]),
 			Hash:         strings.TrimSpace(m[6]),
 		})
+	}
+
+	if err := checkParsed(body, len(roms), c.baseURL+path); err != nil {
+		return nil, err
 	}
 
 	return roms, nil

@@ -6,10 +6,13 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"encoding/xml"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -281,6 +284,64 @@ func TestSearchEmptyQueryFails(t *testing.T) {
 func TestSearchUnknownColumnFails(t *testing.T) {
 	_, err := runCLI(t, fixtures.SearchPage, "search", "sonic", "-c", "bogus")
 	require.Error(t, err)
+}
+
+func TestSearchUnknownColumnFailsWithoutResults(t *testing.T) {
+	// Regression: an empty result used to print "nothing found" and
+	// exit 0, hiding the typo in -c.
+	out, err := runCLI(t, fixtures.EmptyPage, "search", "nothing-here", "-c", "bogus")
+	require.ErrorIs(t, err, render.ErrUnknownColumn)
+	assert.NotContains(t, out, "nothing found")
+}
+
+func TestSearchValidatesOptionsBeforeRequest(t *testing.T) {
+	for _, args := range [][]string{
+		{"search", "sonic", "-f", "tsv"},
+		{"search", "sonic", "-c", "bogus"},
+	} {
+		var hits atomic.Int32
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			hits.Add(1)
+			w.Write([]byte(fixtures.SearchPage))
+		}))
+
+		root := New(
+			WithClient(client.New(client.WithBaseURL(srv.URL))),
+			WithPrinter(render.New(render.WithWriter(io.Discard))),
+		).Root()
+		root.Writer = io.Discard
+
+		err := root.Run(context.Background(), append([]string{"edgeemu"}, args...))
+
+		srv.Close()
+
+		require.Error(t, err, "args=%v", args)
+		assert.Zero(t, hits.Load(), "bad output options must fail before the request, args=%v", args)
+	}
+}
+
+func TestSearchLayoutChangeIsError(t *testing.T) {
+	// Entries the parser cannot read must not pass for "nothing found".
+	page := `<html><body><details data-name="sonic"><summary>Sonic</summary><p>new layout</p></details></body></html>`
+
+	out, err := runCLI(t, page, "search", "sonic")
+	require.ErrorIs(t, err, client.ErrNoEntries)
+	assert.NotContains(t, out, "nothing found")
+}
+
+func TestSystemsCompletesFormats(t *testing.T) {
+	// Regression: "edgeemu systems -f <TAB>" used to offer flag names.
+	origArgs := os.Args
+
+	os.Args = []string{"edgeemu", "systems", "-f", "--generate-shell-completion"}
+
+	defer func() { os.Args = origArgs }()
+
+	out, err := runCLI(t, fixtures.SystemsPage, os.Args[1:]...)
+	require.NoError(t, err)
+
+	assert.Equal(t, render.Formats(), strings.Fields(out))
 }
 
 func TestSystemsCommand(t *testing.T) {
