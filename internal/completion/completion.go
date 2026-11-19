@@ -64,9 +64,10 @@ func New(opts ...Option) *Completion {
 	return c
 }
 
-// Search completes values for the search command: system IDs after
-// -s/--system (served from cache for instant results), column IDs after
-// -c/--columns, formats after -f/--format, and flag names otherwise.
+// Search completes values for the search command (and every other
+// command sharing its flags): system IDs after -s/--system (served from
+// cache for instant results), column IDs after -c/--columns, formats
+// after -f/--format, and flag names otherwise.
 //
 // Flag suggestions are printed by hand instead of via
 // cli.DefaultCompleteWithFlags: the default helper mis-detects the word
