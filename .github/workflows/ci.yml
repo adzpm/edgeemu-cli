@@ -8,8 +8,8 @@ on:
 # Tool versions are pinned; actions are pinned to commit SHAs
 # (tags are mutable, SHAs are not).
 env:
-  TASK_VERSION: "3.53.1"
-  GOLANGCI_LINT_VERSION: "v2.13.1"
+  TASK_VERSION: "3.54.0"
+  GOLANGCI_LINT_VERSION: "v2.15.0"
 
 permissions:
   contents: write # to push the coverage badge to the badges branch
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
 
