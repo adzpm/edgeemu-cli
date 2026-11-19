@@ -12,6 +12,9 @@ linters:
     - exhaustruct_v5
     # The CLI flag definitions are package-level by design.
     - gochecknoglobals
+    # Deprecated in favor of gomodguard_v2, which `default: all` already
+    # enables; keeping the old one only prints a warning on every run.
+    - gomodguard
     # Bans the idiomatic `if err := f(); err != nil` form, contradicting
     # standard Go style (and its autofix produces uncompilable code).
     - noinlineerr
@@ -26,6 +29,8 @@ linters:
     # Wrapping every error from every external call adds noise; static
     # sentinel errors (err113) already provide context where it matters.
     - wrapcheck
+    # Deprecated in favor of wsl_v5, which `default: all` already enables.
+    - wsl
   settings:
     errcheck:
       exclude-functions:

@@ -289,7 +289,7 @@ please don't hammer the site — the data doesn't change that often.
 ## Development
 
 Common tasks live in the [Taskfile](https://taskfile.dev) (`brew install go-task golangci-lint goreleaser`). CI runs
-with pinned tool versions — task 3.53.1, golangci-lint 2.13.1, goreleaser 2.18.0 (see the workflow `env` blocks); keep
+with pinned tool versions — task 3.54.0, golangci-lint 2.15.0, goreleaser 2.20.2 (see the workflow `env` blocks); keep
 local tools reasonably close to those.
 
 ```sh
