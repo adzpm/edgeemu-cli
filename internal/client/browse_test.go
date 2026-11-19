@@ -71,6 +71,16 @@ func TestBrowseEmptyBucket(t *testing.T) {
 	assert.Empty(t, roms)
 }
 
+func TestBrowseUnparsedEntriesIsError(t *testing.T) {
+	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`<details data-name="a"><summary>A</summary><p>changed</p></details>`))
+	})
+
+	_, err := c.Browse(context.Background(), "sega-genesis", "s")
+	require.ErrorIs(t, err, ErrNoEntries)
+	assert.Contains(t, err.Error(), c.baseURL+"/browse/sega-genesis/s")
+}
+
 func TestBrowseHTTPError(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)

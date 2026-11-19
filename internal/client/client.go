@@ -2,6 +2,8 @@
 package client
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +17,19 @@ const defaultTimeout = 5 * time.Minute
 // maxResponseSize caps how much of a response body is read; search pages
 // are a few hundred KB at most, so 20 MiB means something is very wrong.
 const maxResponseSize = 20 << 20
+
+// entryMarker opens every ROM entry on the search and browse pages.
+const entryMarker = "<details data-name="
+
+// checkParsed guards against a silent layout change: a page that lists
+// ROM entries must yield at least one parsed entry.
+func checkParsed(body []byte, parsed int, page string) error {
+	if listed := bytes.Count(body, []byte(entryMarker)); parsed == 0 && listed > 0 {
+		return fmt.Errorf("%w (0 of %d on %s)", ErrNoEntries, listed, page)
+	}
+
+	return nil
+}
 
 // Client talks to edgeemu.net.
 type Client struct {

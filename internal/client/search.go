@@ -64,5 +64,9 @@ func (c *Client) Search(ctx context.Context, query, system string) ([]ds.ROM, er
 		})
 	}
 
+	if err := checkParsed(body, len(roms), c.baseURL+"/search.php"); err != nil {
+		return nil, err
+	}
+
 	return roms, nil
 }

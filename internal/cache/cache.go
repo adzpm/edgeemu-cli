@@ -91,6 +91,12 @@ func (c *Cache) Load(maxAge time.Duration) []ds.System {
 		return nil
 	}
 
+	// An empty list is never stored, so one on disk is a damaged cache;
+	// serving it would hide every system until the TTL runs out.
+	if len(sc.Systems) == 0 {
+		return nil
+	}
+
 	return sc.Systems
 }
 

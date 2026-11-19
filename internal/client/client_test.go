@@ -65,6 +65,20 @@ func TestSearchNoResults(t *testing.T) {
 	assert.Empty(t, roms)
 }
 
+func TestSearchUnparsedEntriesIsError(t *testing.T) {
+	// The page lists entries, but in a markup the parser does not know:
+	// that is a layout change, not an empty result.
+	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`<details data-name="a"><summary>A</summary><p>changed</p></details>` +
+			`<details data-name="b"><summary>B</summary><p>changed</p></details>`))
+	})
+
+	_, err := c.Search(context.Background(), "sonic", "all")
+	require.ErrorIs(t, err, ErrNoEntries)
+	assert.Contains(t, err.Error(), "0 of 2")
+	assert.Contains(t, err.Error(), c.baseURL+"/search.php")
+}
+
 func TestSearchHTTPError(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
