@@ -157,10 +157,11 @@ func (a *App) Root() *cli.Command {
 				Action:        a.Dump,
 			},
 			{
-				Name:   "systems",
-				Usage:  "list available systems",
-				Flags:  []cli.Flag{formatFlag, refreshFlag},
-				Action: a.Systems,
+				Name:          "systems",
+				Usage:         "list available systems",
+				Flags:         []cli.Flag{formatFlag, refreshFlag},
+				ShellComplete: a.comp.Search,
+				Action:        a.Systems,
 			},
 			{
 				Name:      "install-completion",

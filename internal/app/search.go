@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/urfave/cli/v3"
@@ -18,6 +19,11 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 		return ErrUsage
 	}
 
+	format, columns, err := outputOptions(cmd)
+	if err != nil {
+		return err
+	}
+
 	roms, err := a.edge.Search(ctx, query, cmd.String(systemFlag.Name))
 	if err != nil {
 		return err
@@ -27,12 +33,29 @@ func (a *App) Search(ctx context.Context, cmd *cli.Command) error {
 		roms = roms[:limit]
 	}
 
+	return a.printROMs(format, roms, columns)
+}
+
+// outputOptions reads and validates the -f and -c flags. Commands call
+// it before touching the network, so a typo fails at once instead of
+// after a request (or a whole crawl) and is never masked by an empty
+// result.
+func outputOptions(cmd *cli.Command) (string, []string, error) {
+	format := cmd.String(formatFlag.Name)
+	if !slices.Contains(render.Formats(), format) {
+		return "", nil, fmt.Errorf("%w %q (available: %s)", ErrUnknownFormat, format, strings.Join(render.Formats(), ", "))
+	}
+
 	columns := cmd.StringSlice(columnsFlag.Name)
 	if len(columns) == 0 {
 		columns = render.ColumnIDs() // everything, explicitly
 	}
 
-	return a.printROMs(cmd.String(formatFlag.Name), roms, columns)
+	if err := render.ValidateColumns(columns); err != nil {
+		return "", nil, err
+	}
+
+	return format, columns, nil
 }
 
 // printROMs renders search results in the requested format.

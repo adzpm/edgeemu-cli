@@ -4,14 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/urfave/cli/v3"
 
 	"github.com/adzpm/edgeemu-cli/internal/ds"
-	"github.com/adzpm/edgeemu-cli/internal/render"
 )
 
 // ErrUnknownSystem is returned for a -s value the site does not list.
@@ -21,18 +18,9 @@ var ErrUnknownSystem = errors.New("unknown system")
 // of the selected systems (which, unlike the search, are not capped at
 // 100 entries) and renders the full index in the requested format.
 func (a *App) Dump(ctx context.Context, cmd *cli.Command) error {
-	format := cmd.String(formatFlag.Name)
-	if !slices.Contains(render.Formats(), format) {
-		return fmt.Errorf("%w %q (available: %s)", ErrUnknownFormat, format, strings.Join(render.Formats(), ", "))
-	}
-
-	columns := cmd.StringSlice(columnsFlag.Name)
-	if len(columns) == 0 {
-		columns = render.ColumnIDs() // everything, explicitly
-	}
-
-	// Validate the column selection before the crawl, not after it.
-	if err := render.ValidateColumns(columns); err != nil {
+	// Validate the output options before the crawl, not after it.
+	format, columns, err := outputOptions(cmd)
+	if err != nil {
 		return err
 	}
 
